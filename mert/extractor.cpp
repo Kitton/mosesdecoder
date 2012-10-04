@@ -1,5 +1,5 @@
 /**
- * Extract features and score statistics from nvest file, optionally merging with
+ * Extract features and score statistics from nbest file, optionally merging with
  * those from the previous iteration.
  * Developed during the 2nd MT marathon.
  **/
@@ -11,7 +11,9 @@
 #include <getopt.h>
 #include <boost/scoped_ptr.hpp>
 
+#include "DataFactory.h"
 #include "Data.h"
+#include "DataAsiya.h"
 #include "Scorer.h"
 #include "ScorerFactory.h"
 #include "Timer.h"
@@ -103,7 +105,7 @@ void ParseCommandOptions(int argc, char** argv, ProgramOption* opt) {
         opt->scorerType = string(optarg);
         break;
       case 'c':
-        opt->scorerConfig = string(optarg);
+        opt->scorerConfig = string(optarg); // ADD THE SOURCE FILE
         break;
       case 'f':
         opt->scorerFactors = string(optarg);
@@ -148,6 +150,7 @@ void ParseCommandOptions(int argc, char** argv, ProgramOption* opt) {
 
 int main(int argc, char** argv)
 {
+
   ResetUserTime();
 
   ProgramOption option;
@@ -173,22 +176,18 @@ int main(int argc, char** argv)
     if (option.nbestFile.length() > 0) {
       Tokenize(option.nbestFile.c_str(), ',', &nbestFiles);
     }
-
     vector<string> referenceFiles;
     if (option.referenceFile.length() > 0) {
       Tokenize(option.referenceFile.c_str(), ',', &referenceFiles);
     }
-
     vector<string> prevScoreDataFiles;
     if (option.prevScoreDataFile.length() > 0) {
       Tokenize(option.prevScoreDataFile.c_str(), ',', &prevScoreDataFiles);
     }
-
     vector<string> prevFeatureDataFiles;
     if (option.prevFeatureDataFile.length() > 0) {
       Tokenize(option.prevFeatureDataFile.c_str(), ',', &prevFeatureDataFiles);
     }
-
     if (prevScoreDataFiles.size() != prevFeatureDataFiles.size()) {
       throw runtime_error("Error: there is a different number of previous score and feature files");
     }
@@ -200,43 +199,39 @@ int main(int argc, char** argv)
     }
 
     TRACE_ERR("Scorer type: " << option.scorerType << endl);
-
     boost::scoped_ptr<Scorer> scorer(
-        ScorerFactory::getScorer(option.scorerType, option.scorerConfig));
-
+    ScorerFactory::getScorer(option.scorerType, option.scorerConfig));
     // set Factors and Filter used to preprocess the sentences
     scorer->setFactors(option.scorerFactors);
     scorer->setFilter(option.scorerFilter);
-
+cout << "exractor set reference files." << endl;
     // load references
     if (referenceFiles.size() > 0)
       scorer->setReferenceFiles(referenceFiles);
 
     PrintUserTime("References loaded");
-
-    Data data(scorer.get());
-
+    boost::scoped_ptr<Data> data (
+        DataFactory::getData(option.scorerType, scorer.get()) );
     // load old data
     for (size_t i = 0; i < prevScoreDataFiles.size(); i++) {
-      data.load(prevFeatureDataFiles.at(i), prevScoreDataFiles.at(i));
+      data->load(prevFeatureDataFiles.at(i), prevScoreDataFiles.at(i));
     }
 
     PrintUserTime("Previous data loaded");
-
     // computing score statistics of each nbest file
     for (size_t i = 0; i < nbestFiles.size(); i++) {
-      data.loadNBest(nbestFiles.at(i));
+        data->loadNBest(nbestFiles.at(i));
     }
 
     PrintUserTime("Nbest entries loaded and scored");
-
     //ADDED_BY_TS
     if (!option.allowDuplicates) {
-      data.removeDuplicates();
+      data->removeDuplicates();
     }
     //END_ADDED
 
-    data.save(option.featureDataFile, option.scoreDataFile, option.binmode);
+    cout << "exractor save. feature data file: " << option.featureDataFile << ", score data file: " << option.scoreDataFile << endl;
+    data->save(option.featureDataFile, option.scoreDataFile, option.binmode);
     PrintUserTime("Stopping...");
 
     return EXIT_SUCCESS;

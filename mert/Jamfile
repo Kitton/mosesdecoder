@@ -49,6 +49,9 @@ SentenceLevelScorer.cpp
 Permutation.cpp
 PermutationScorer.cpp
 StatisticsBasedScorer.cpp
+AsiyaScorer.cpp
+DataFactory.cpp
+DataAsiya.cpp
 ../util//kenutil m ..//z ;
 
 exe mert : mert.cpp mert_lib ../moses/src//ThreadPool ;
