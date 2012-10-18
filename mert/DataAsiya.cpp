@@ -21,12 +21,12 @@ namespace MosesTuning
 {
   
 
-DataAsiya::DataAsiya()
-  : m_scorer(NULL),
-    m_num_scores(0),
-    m_sparse_flag(false),
-    m_score_data(),
-    m_feature_data() {}
+//DataAsiya::DataAsiya()
+//  : m_scorer(NULL),
+//    m_num_scores(0),
+//    m_sparse_flag(false),
+//    m_score_data(),
+//    m_feature_data() {}
 
 DataAsiya::DataAsiya(Scorer* scorer)
     : m_scorer(scorer),

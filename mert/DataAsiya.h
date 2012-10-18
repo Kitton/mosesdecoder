@@ -35,7 +35,7 @@ private:
 
 public:
   explicit DataAsiya(Scorer* scorer);
-  explicit DataAsiya();
+  //explicit DataAsiya();
   ~DataAsiya();
   
   virtual void loadNBest(const std::string &file);

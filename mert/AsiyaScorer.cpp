@@ -35,7 +35,8 @@ namespace MosesTuning
 
 AsiyaScorer::AsiyaScorer(const string& config)
     : StatisticsBasedScorer("Asiya", config),
-      m_ref_length_type(CLOSEST) {
+      m_ref_length_type(CLOSEST)
+{
   cout << "asiya constructor." << endl;
   //todo. save from config the source file and save it!
   const string reflen = getConfig(KEY_REFLEN, REFLEN_CLOSEST);
@@ -77,6 +78,12 @@ void AsiyaScorer::setSourceFile(const string& sourceFile)
     m_source_file =  string(sourceFile);
 }
 
+void AsiyaScorer::setConfigFile(const string &configFile)
+{
+    TRACE_ERR("Loading config from " << configFile << endl);
+    m_config_file = string(configFile);
+}
+
 
 
 statscore_t AsiyaScorer::calculateScore(const vector<int>& comps) const
@@ -89,7 +96,8 @@ cout << "asiya calculate score. who is calling this function? " << endl;
 }
 
 
-void AsiyaScorer::addCandidateSentence(const string& sid, const string& sentence ){
+void AsiyaScorer::addCandidateSentence(const string& sid, const string& sentence )
+{
     int last_i = m_candidate_sentences.size();
     int idx = atoi( sid.c_str() );
 
@@ -102,7 +110,8 @@ void AsiyaScorer::addCandidateSentence(const string& sid, const string& sentence
 }
 
 
-void AsiyaScorer::doScoring( ScoreDataHandle m_score_data ){
+void AsiyaScorer::doScoring( ScoreDataHandle m_score_data )
+{
     cout << "doscoring " << endl;
     writeCandidateFile();
     writeConfigFile();
@@ -115,7 +124,8 @@ void AsiyaScorer::doScoring( ScoreDataHandle m_score_data ){
 }
 
 
-void AsiyaScorer::writeCandidateFile(){
+void AsiyaScorer::writeCandidateFile()
+{
     cout << "writing candidate file.." << endl;
     for (size_t i = 0; i < m_candidate_sentences.size(); ++i) {
         std::stringstream ss;
@@ -133,13 +143,23 @@ void AsiyaScorer::writeCandidateFile(){
 }
 
 
-void AsiyaScorer::writeConfigFile(){
+void AsiyaScorer::writeConfigFile()
+{
 
 }
 
 
-void AsiyaScorer::callAsiya(){
-
+void AsiyaScorer::callAsiya()
+{
+    // ~/perl ../bin/Asiya.pl ./Asiya.config
+    string perl_location = "~/perl";
+    string asiya_location = "~/asiya//bin/Asiya.pl";
+    string asiya_config_location = "Asiya.config";
+    string run_command;
+    run_command = perl_location + " " + asiya_location + " " + asiya_config_location;
+    //Not a good variant, should try a special version for perl scripts.
+    //Dont forget about "export ASIYA_HOME=~/asiya/"
+    system(run_command.c_str());
 }
 
 
