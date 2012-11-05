@@ -145,18 +145,37 @@ void AsiyaScorer::writeCandidateFile()
 
 void AsiyaScorer::writeConfigFile()
 {
+    string asiya_config_location = "Asiya.config";
+    ofstream config_file;
+    config_file.open( asiya_config_location.c_str() );
+    if ( config_file.is_open() ) {
+        config_file << "input=raw"  << endl;
+        config_file << "srclang=es"  << endl;
+        config_file << "trglang=en"  << endl;
 
+        config_file << "src=./data/src.txt"  << endl;
+        config_file << "ref=./data/ref.txt"  << endl;
+
+        for (size_t i = 0; i < m_candidate_sentences.size(); ++i) {
+            std::stringstream ss;
+            ss << m_source_file << "." << i << ".out";
+            string candfilename = ss.str();
+            config_file << "sys=" << candfilename << endl;
+        }
+    }
+        config_file.close();
 }
 
 
 void AsiyaScorer::callAsiya()
 {
-    // ~/perl ../bin/Asiya.pl ./Asiya.config
-    string perl_location = "~/perl";
-    string asiya_location = "~/asiya//bin/Asiya.pl";
-    string asiya_config_location = "Asiya.config";
+    // ~/perl ../../../operador/asiya/bin/Asiya.pl -eval single -m BLEU ./Asiya.config
+    string perl_location = "~/perl ";
+    string asiya_location = " ~/../operador/asiya//bin/Asiya.pl ";
+    string asiya_config_location = " Asiya.config ";
+    string params = " -eval single -m BLEU ";
     string run_command;
-    run_command = perl_location + " " + asiya_location + " " + asiya_config_location;
+    run_command = perl_location + asiya_location + params + asiya_config_location + " 2>&1";
     //Not a good variant, should try a special version for perl scripts.
     //Dont forget about "export ASIYA_HOME=~/asiya/"
     system(run_command.c_str());
@@ -165,7 +184,7 @@ void AsiyaScorer::callAsiya()
 
 void AsiyaScorer::prepareStats(size_t sid, const string& text, ScoreStats& entry)
 {
-    cout << "asiya prepare stats." << endl;
+    cout << "asiya prepare stats. " << text << endl;
   if (sid >= m_reference_files.size()) {
     stringstream msg;
     msg << "Sentence id (" << sid << ") not found in reference set";

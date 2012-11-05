@@ -80,7 +80,8 @@ struct ProgramOption {
   int verbosity;
 
   ProgramOption()
-      : scorerType("BLEU"),
+//      : scorerType("ASIYA"),
+        : scorerType("BLEU"),
         scorerConfig(""),
         scorerFactors(""),
         scorerFilter(""),

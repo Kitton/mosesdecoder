@@ -33,6 +33,7 @@ using namespace MosesTuning;
 namespace {
 
 const char kDefaultOptimizer[] = "powell";
+//const char kDefaultScorer[] = "ASIYA";
 const char kDefaultScorer[] = "BLEU";
 const char kDefaultScorerFile[] = "statscore.data";
 const char kDefaultFeatureFile[] = "features.data";

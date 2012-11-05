@@ -33,6 +33,7 @@ vector<string> ScorerFactory::getTypes() {
 }
 
 Scorer* ScorerFactory::getScorer(const string& type, const string& config) {
+    cout << "++++++++++++++++++++++++++ ScorerFactory :" << type << endl;
   if (type == "BLEU") {
     return new BleuScorer(config);
   } else if (type == "PER") {
