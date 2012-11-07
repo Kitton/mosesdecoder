@@ -35,12 +35,12 @@ private:
 
 public:
   explicit DataAsiya(Scorer* scorer);
-  //explicit DataAsiya();
+  explicit DataAsiya();
   ~DataAsiya();
   
-  virtual void loadNBest(const std::string &file);
+  void loadNBest(const std::string &file);
 
-  virtual void save(const std::string &featfile, const std::string &scorefile, bool bin=false);
+//  virtual void save(const std::string &featfile, const std::string &scorefile, bool bin=false);
 
 
 };

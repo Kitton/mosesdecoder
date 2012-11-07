@@ -21,12 +21,12 @@ namespace MosesTuning
 {
   
 
-//DataAsiya::DataAsiya()
-//  : m_scorer(NULL),
-//    m_num_scores(0),
-//    m_sparse_flag(false),
-//    m_score_data(),
-//    m_feature_data() {}
+DataAsiya::DataAsiya()
+  : m_scorer(NULL),
+    m_num_scores(0),
+    m_sparse_flag(false),
+    m_score_data(),
+    m_feature_data() {}
 
 DataAsiya::DataAsiya(Scorer* scorer)
     : m_scorer(scorer),
@@ -79,10 +79,10 @@ void DataAsiya::loadNBest(const string &file)
       sentence += "|||";
       sentence += alignment;
     }
-    cout << "calling prepare stats for sentence index " << sentence_index << endl;
+//    cout << "calling prepare stats for sentence index " << sentence_index << endl;
     // prepare stats gets all the scores for sentence_i of sentence_index
     a_scorer->addCandidateSentence(sentence_index, sentence);
-    cout << "features" << endl;
+//    cout << "features" << endl;
   }
   inp.close();
   cout << " do scoring " << endl;
@@ -99,15 +99,15 @@ void DataAsiya::loadNBest(const string &file)
 
 
 
-void DataAsiya::save(const std::string &featfile, const std::string &scorefile, bool bin) {
-  if (bin)
-    cerr << "Binary write mode is selected" << endl;
-  else
-    cerr << "Binary write mode is NOT selected" << endl;
+//void DataAsiya::save(const std::string &featfile, const std::string &scorefile, bool bin) {
+//  if (bin)
+//    cerr << "Binary write mode is selected" << endl;
+//  else
+//    cerr << "Binary write mode is NOT selected" << endl;
 
-  m_feature_data->save(featfile, bin);
-  m_score_data->save(scorefile, bin);
-}
+//  m_feature_data->save(featfile, bin);
+//  m_score_data->save(scorefile, bin);
+//}
 
 
 }

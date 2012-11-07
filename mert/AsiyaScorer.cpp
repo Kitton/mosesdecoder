@@ -126,20 +126,19 @@ void AsiyaScorer::doScoring( ScoreDataHandle m_score_data )
 
 void AsiyaScorer::writeCandidateFile()
 {
-    cout << "writing candidate file.." << endl;
-    for (size_t i = 0; i < m_candidate_sentences.size(); ++i) {
-        std::stringstream ss;
-        ss << m_source_file << "." << i << ".out";
-        string candfilename = ss.str();
-        ofstream candfile;
-        candfile.open( candfilename.c_str() );
-        if ( candfile.is_open() ) {
-            for (size_t j = 0; j < m_candidate_sentences.size(); ++j) {
+    //Write all translations into one file.
+    cout << "writing candidate file..." << endl;
+    std::stringstream ss;
+    ss << "trans.txt";
+    string candfilename = ss.str();
+    ofstream candfile;
+    candfile.open( candfilename.c_str() );
+    if ( candfile.is_open() )
+        for (size_t i = 0; i < m_candidate_sentences.size(); ++i)
+            for (size_t j = 0; j < m_candidate_sentences[i].size(); ++j)
                 candfile << m_candidate_sentences[i][j]  << endl;
-            }
-            candfile.close();
-        }
-    }
+
+    candfile.close();
 }
 
 
@@ -152,18 +151,12 @@ void AsiyaScorer::writeConfigFile()
         config_file << "input=raw"  << endl;
         config_file << "srclang=es"  << endl;
         config_file << "trglang=en"  << endl;
-
-        config_file << "src=./data/src.txt"  << endl;
+        //Fake source file.
+        config_file << "src=trans.txt"  << endl;
         config_file << "ref=./data/ref.txt"  << endl;
-
-        for (size_t i = 0; i < m_candidate_sentences.size(); ++i) {
-            std::stringstream ss;
-            ss << m_source_file << "." << i << ".out";
-            string candfilename = ss.str();
-            config_file << "sys=" << candfilename << endl;
-        }
+        config_file << "sys=trans.txt" << endl;
     }
-        config_file.close();
+    config_file.close();
 }
 
 
