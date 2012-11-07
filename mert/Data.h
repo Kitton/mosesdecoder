@@ -28,7 +28,7 @@ typedef boost::shared_ptr<FeatureData> FeatureDataHandle;
 // compiler synthesised shallow copy is available.
 class Data
 {
-private:
+protected:
   Scorer* m_scorer;
   std::string m_score_type;
   std::size_t m_num_scores;
@@ -63,11 +63,11 @@ public:
   bool hasSparseFeatures() const { return m_sparse_flag; }
   void mergeSparseFeatures();
 
-  void loadNBest(const std::string &file);
+  virtual void loadNBest(const std::string &file);
 
   void load(const std::string &featfile, const std::string &scorefile);
 
-  void save(const std::string &featfile, const std::string &scorefile, bool bin=false);
+  virtual void save(const std::string &featfile, const std::string &scorefile, bool bin=false);
 
   //ADDED BY TS
   void removeDuplicates();
