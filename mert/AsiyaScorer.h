@@ -10,7 +10,6 @@
 #include "StatisticsBasedScorer.h"
 #include "ScopedVector.h"
 #include "Util.h"
-#include "FeatureData.h"
 #include "Data.h"
 
 namespace MosesTuning
@@ -52,10 +51,9 @@ public:
   virtual void prepareStats(std::size_t sindex, const std::string& text, ScoreStats& entry);
 
 private:
-  ReferenceLengthType m_ref_length_type;
-
-  // reference translations.
   ScopedVector<Reference> m_references;
+
+  ReferenceLengthType m_ref_length_type;
 
   // reference files
   std::vector<std::string> m_reference_files;
@@ -72,7 +70,9 @@ private:
 
   void writeCandidateFile();
   void writeConfigFile();
+  void writeReferenceFiles();
   void callAsiya();
+  void readscores();
 
 };
 
