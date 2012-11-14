@@ -25,14 +25,6 @@ class Scorer;
 // compiler synthesised shallow copy is available.
 class DataAsiya : public Data
 {
-private:
-  Scorer* m_scorer;
-  std::string m_score_type;
-  std::size_t m_num_scores;
-  bool m_sparse_flag;
-  ScoreDataHandle m_score_data;
-  FeatureDataHandle m_feature_data;
-
 public:
   explicit DataAsiya(Scorer* scorer);
   explicit DataAsiya();

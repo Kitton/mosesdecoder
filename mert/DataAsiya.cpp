@@ -22,19 +22,10 @@ namespace MosesTuning
   
 
 DataAsiya::DataAsiya()
-  : m_scorer(NULL),
-    m_num_scores(0),
-    m_sparse_flag(false),
-    m_score_data(),
-    m_feature_data() {}
+    : Data() {}
 
 DataAsiya::DataAsiya(Scorer* scorer)
-    : m_scorer(scorer),
-      m_score_type(m_scorer->getName()),
-      m_num_scores(0),
-      m_sparse_flag(false),
-      m_score_data(new ScoreData(m_scorer)),
-      m_feature_data(new FeatureData)
+    : Data(scorer)
 {
   TRACE_ERR("DataAsiya::m_score_type " << m_score_type << endl);
   TRACE_ERR("DataAsiya::Scorer type from Scorer: " << m_scorer->getName() << endl);
@@ -82,7 +73,13 @@ void DataAsiya::loadNBest(const string &file)
 //    cout << "calling prepare stats for sentence index " << sentence_index << endl;
     // prepare stats gets all the scores for sentence_i of sentence_index
     a_scorer->addCandidateSentence(sentence_index, sentence);
-//    cout << "features" << endl;
+
+    m_score_data->add(scoreentry, sentence_index);
+    // examine first line for name of features
+    if (!existsFeatureNames()) {
+      InitFeatureMap(feature_str);
+    }
+    AddFeatures(feature_str, sentence_index);
   }
   inp.close();
   cout << " do scoring " << endl;
