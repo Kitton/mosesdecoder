@@ -35,9 +35,6 @@ public:
   explicit AsiyaScorer(const std::string& config = "");
   ~AsiyaScorer();
 
-  virtual void setSourceFile(const std::string& sourceFile = "");
-  virtual void setConfigFile(const std::string& configFile = "");
-
   virtual void setReferenceFiles(const std::vector<std::string>& referenceFiles);
   bool OpenReference(const char* filename, std::size_t file_id);
   const std::vector<Reference*>& GetReferences() const { return m_references.get(); }
@@ -61,6 +58,10 @@ private:
   std::string m_source_file;
   //config file for Asiya
   std::string m_config_file;
+  //file with translation variants.
+  std::string m_translation_file;
+  //1st part of the name for files with reference translation.
+  std::string m_reference_file;
   // candidate sentences [sentence_idx][i_best]
   std::vector<std::vector<std::string> > m_candidate_sentences;
 

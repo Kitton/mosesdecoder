@@ -34,7 +34,11 @@ namespace MosesTuning
 
 AsiyaScorer::AsiyaScorer(const string& config)
     : StatisticsBasedScorer("Asiya", config),
-      m_ref_length_type(CLOSEST)
+      m_ref_length_type(CLOSEST),
+      m_source_file("./temp/trans.txt"),         //Fake source file
+      m_config_file("./temp/Asiya.config"),
+      m_translation_file("./temp/trans.txt"),
+      m_reference_file("./temp/ref.txt_")
 {
     cout << "asiya constructor." << endl;
     //todo. save from config the source file and save it!
@@ -66,19 +70,6 @@ void AsiyaScorer::setReferenceFiles(const vector<string>& referenceFiles)
         //todo. check out if the file exists and throw an error
         m_reference_files.push_back( string(referenceFiles[i]) );
     }
-}
-
-void AsiyaScorer::setSourceFile(const string& sourceFile)
-{
-    TRACE_ERR("Loading source from " << sourceFile << endl);
-    //todo. check out if the file exists and throw an error
-    m_source_file =  string(sourceFile);
-}
-
-void AsiyaScorer::setConfigFile(const string &configFile)
-{
-    TRACE_ERR("Loading config from " << configFile << endl);
-    m_config_file = string(configFile);
 }
 
 
@@ -121,7 +112,7 @@ void AsiyaScorer::writeReferenceFiles()
     for (size_t i = 0; i < m_reference_files.size(); ++i)
     {
         std::stringstream ss;
-        ss << "./temp/ref_" << i << ".txt";
+        ss << m_reference_file << i;
         string filename = ss.str();
         ofstream file;
         file.open((filename.c_str()));
@@ -191,12 +182,11 @@ void AsiyaScorer::writeConfigFile()
         config_file << "input=raw"  << endl;
         config_file << "srclang=es"  << endl;
         config_file << "trglang=en"  << endl;
-        //Fake source file.
-        config_file << "src=./temp/trans.txt"  << endl;
+        config_file << "src=" << m_source_file  << endl;
         for (size_t i = 0; i < m_reference_files.size(); ++i)
-            config_file << "ref=./temp/ref_" << i << ".txt"  << endl;
+            config_file << "ref=" << m_reference_file << i << endl;
 
-        config_file << "sys=./temp/trans.txt" << endl;
+        config_file << "sys=" << m_translation_file << endl;
     }
     config_file.close();
 }
