@@ -100,11 +100,32 @@ void AsiyaScorer::doScoring( ScoreDataHandle m_score_data )
     writeCandidateFile();
     writeConfigFile();
     callAsiya();
-    //readScores();
     //score each sentence
     //m_scorer->prepareStats(sentence_index, sentence, scoreentry);
     // save the score for previous sentence. Do it aling with previous function
     //m_score_data->add(scoreentry, sentence_index);
+}
+
+void AsiyaScorer::readscores(string commandOutput)
+{
+
+    std::stringstream ss(commandOutput);
+
+    std::string line;
+    //TODO change it later.
+    std::string searchedWord = "BLEU";
+
+    while(std::getline(ss,line))
+    {
+        if (line.find(searchedWord) != std::string::npos)
+        {
+            std::stringstream ssLine(line);
+            std:string set, doc, seg, metric, score;
+            ssLine >> set >> doc >> seg >> metric >> score;
+            double temp = atof(score.c_str());
+            scores.push_back(temp);
+        }
+    }
 }
 
 void AsiyaScorer::writeReferenceFiles()
@@ -198,12 +219,14 @@ void AsiyaScorer::callAsiya()
     string perl_location = "~/perl ";
     string asiya_location = " ~/../operador/asiya//bin/Asiya.pl ";
     string asiya_config_location = " Asiya.config ";
-    string params = " -eval single -m BLEU ";
+    string params = " -eval single -m BLEU -g seg -s smatrix";
     string run_command;
-    run_command = perl_location + asiya_location + params + asiya_config_location + " 2>&1";
-    //Not a good variant, should try a special version for perl scripts.
-    //Dont forget about "export ASIYA_HOME=~/asiya/"
-    system(run_command.c_str());
+    run_command = perl_location + asiya_location + asiya_config_location + params;
+    //stderr->stdout
+    run_command += + " 2>&1";
+
+    std::string result = executeCommand(run_command.c_str());
+    readscores(result);
 }
 
 
@@ -229,6 +252,18 @@ void AsiyaScorer::prepareStats(size_t sid, const string& text, ScoreStats& entry
     entry.set(stats);
 }
 
+std::string executeCommand(char* cmd) {
+    FILE* pipe = popen(cmd, "r");
+    if (!pipe) return "ERROR";
+    char buffer[128];
+    std::string result = "";
+    while(!feof(pipe)) {
+        if(fgets(buffer, 128, pipe) != NULL)
+            result += buffer;
+    }
+    pclose(pipe);
+    return result;
+}
 
 }
 

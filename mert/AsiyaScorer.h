@@ -64,6 +64,7 @@ private:
   std::string m_reference_file;
   // candidate sentences [sentence_idx][i_best]
   std::vector<std::vector<std::string> > m_candidate_sentences;
+  std::vector<double> scores;
 
   // no copying allowed
   AsiyaScorer(const AsiyaScorer&);
@@ -73,7 +74,8 @@ private:
   void writeConfigFile();
   void writeReferenceFiles();
   void callAsiya();
-  void readscores();
+  void readscores(std::string commandOutput);
+  std::string executeCommand(char* cmd);
 
 };
 
