@@ -6,9 +6,10 @@
 #include <string>
 #include <vector>
 
-#include "Util.h"
+#include "moses/Util.h"
 #include "OnDiskWrapper.h"
 #include "SourcePhrase.h"
+#include "OnDiskQuery.h"
 
 using namespace std;
 using namespace OnDiskPt;
@@ -38,20 +39,20 @@ void Tokenize(OnDiskPt::Phrase &phrase
 
     if (splitPos == string::npos) {
       // lhs - only 1 word
-      Word *word = new Word();
+      WordPtr word (new Word());
       word->CreateFromString(wordStr, onDiskWrapper.GetVocab());
       phrase.AddWord(word);
     } else {
       // source & target non-terms
       if (addSourceNonTerm) {
-        Word *word = new Word();
+        WordPtr word( new Word());
         word->CreateFromString(wordStr, onDiskWrapper.GetVocab());
         phrase.AddWord(word);
       }
 
       wordStr = token.substr(splitPos, tokSize - splitPos);
       if (addTargetNonTerm) {
-        Word *word = new Word();
+        WordPtr word(new Word());
         word->CreateFromString(wordStr, onDiskWrapper.GetVocab());
         phrase.AddWord(word);
       }
@@ -59,7 +60,7 @@ void Tokenize(OnDiskPt::Phrase &phrase
     }
   } else {
     // term
-    Word *word = new Word();
+    WordPtr word(new Word());
     word->CreateFromString(token, onDiskWrapper.GetVocab());
     phrase.AddWord(word);
   }
@@ -89,52 +90,20 @@ int main(int argc, char **argv)
   if(ttable == "")
     usage();
 
-	OnDiskWrapper onDiskWrapper;
+  OnDiskWrapper onDiskWrapper;
   bool retDb = onDiskWrapper.BeginLoad(ttable);
-	CHECK(retDb);
-	
-	cerr << "Ready..." << endl;
-	
+  CHECK(retDb);
+  OnDiskQuery onDiskQuery(onDiskWrapper);
+
+  cerr << "Ready..." << endl;
+
   std::string line;
   while(getline(std::cin, line)) {
     std::vector<std::string> tokens;
     tokens = Moses::Tokenize(line, " ");
 
-		cerr << "line: " << line << endl;
-		
-		// create source phrase
-    SourcePhrase sourcePhrase;
-
-		for (size_t pos = 0; pos < tokens.size(); ++pos)
-		{
-		  const string &tok = tokens[pos];
-		  
-		  if (pos == tokens.size() - 1) 
-		  { // last position. LHS non-term
-			  Tokenize(sourcePhrase, tok, false, true, onDiskWrapper);
-			}
-			else
-			{
-			  Tokenize(sourcePhrase, tok, true, true, onDiskWrapper);
-			}
-		}
-		
-    const PhraseNode *node = &onDiskWrapper.GetRootSourceNode();
-		cerr << "node=" << node << endl;
-    assert(node);
-    
-    for (size_t pos = 0; pos < sourcePhrase.GetSize(); ++pos)
-		{
-		  const Word &word = sourcePhrase.GetWord(pos);
-		  cerr << word << " ";
-		  node = node->GetChild(word, onDiskWrapper);
-  		cerr << "node=" << node << endl;
-		  
-		  if (node == NULL)
-		  {
-		    break;
-		  }
-		}
+    cerr << "line: " << line << endl;
+    const PhraseNode* node = onDiskQuery.Query(tokens);
     
     if (node)
     { // source phrase points to a bunch of rules
@@ -148,8 +117,6 @@ int main(int argc, char **argv)
         cerr << "  ";
         targetPhrase.DebugPrint(cerr, onDiskWrapper.GetVocab());
         cerr << endl;
-        
-
       }
     }
     else
@@ -162,12 +129,11 @@ int main(int argc, char **argv)
   }
   
   cerr << "Finished." << endl;
-	
 }
 
 void usage()
 {
-  std::cerr << 	"Usage: queryOnDiskPt [-n <nscores>] [-a] -t <ttable>\n"
+  std::cerr << "Usage: queryOnDiskPt [-n <nscores>] [-a] -t <ttable>\n"
             "-tlimit <table limit>      max number of rules per source phrase (default: 20)\n"
             "-t <ttable>       phrase table\n";
   exit(1);
