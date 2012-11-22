@@ -94,12 +94,21 @@ void AsiyaScorer::addCandidateSentence(const string& sid, const string& sentence
     m_candidate_sentences[idx].push_back(sentence);
 }
 
-void AsiyaScorer::doScoring( ScoreDataHandle m_score_data )
+void AsiyaScorer::doScoring()
 {
     writeReferenceFiles();
     writeCandidateFile();
     writeConfigFile();
     callAsiya();
+
+//    for (int i = 0; i < scores.size(); ++i)
+//    {
+//        //put just 1 score now.
+//        vector<ScoreStatsType> stats(1);
+//        ScoreStats entry;
+//        m_score_data->add(scoreentry, sentence_index);
+//    }
+
     //score each sentence
     //m_scorer->prepareStats(sentence_index, sentence, scoreentry);
     // save the score for previous sentence. Do it aling with previous function
@@ -108,7 +117,6 @@ void AsiyaScorer::doScoring( ScoreDataHandle m_score_data )
 
 void AsiyaScorer::readscores(string commandOutput)
 {
-
     std::stringstream ss(commandOutput);
 
     std::string line;
@@ -120,7 +128,7 @@ void AsiyaScorer::readscores(string commandOutput)
         if (line.find(searchedWord) != std::string::npos)
         {
             std::stringstream ssLine(line);
-            std:string set, doc, seg, metric, score;
+            std::string set, doc, seg, metric, score;
             ssLine >> set >> doc >> seg >> metric >> score;
             double temp = atof(score.c_str());
             scores.push_back(temp);
@@ -151,11 +159,11 @@ void AsiyaScorer::writeReferenceFiles()
             }
 
             //Number of reference and translated sentences should be equal.
-            int countRefSentences = std::count(std::istreambuf_iterator<char>(inputRef), std::istreambuf_iterator<char>(), '\n');
+            size_t countRefSentences = std::count(std::istreambuf_iterator<char>(inputRef), std::istreambuf_iterator<char>(), '\n');
             inputRef.seekg(0, ios::beg);    //go to the begining.
             if (m_candidate_sentences.size() != countRefSentences)
             {
-                cout << "-------Not equal number of translated and reference sentences";
+                cout << "-------Not equal number of translated and reference sentences " << m_reference_files[i] << endl;
                 inputRef.close();
                 file.close();
                 continue;
@@ -219,50 +227,67 @@ void AsiyaScorer::callAsiya()
     string perl_location = "~/perl ";
     string asiya_location = " ~/../operador/asiya//bin/Asiya.pl ";
     string asiya_config_location = " Asiya.config ";
-    string params = " -eval single -m BLEU -g seg -s smatrix";
+    string params = " -eval single -m BLEU -g sys -s smatrix";
     string run_command;
     run_command = perl_location + asiya_location + asiya_config_location + params;
     //stderr->stdout
     run_command += + " 2>&1";
 
-    std::string result = executeCommand(run_command.c_str());
+    string result = execCommand(run_command);
     readscores(result);
 }
 
-
-void AsiyaScorer::prepareStats(size_t sid, const string& text, ScoreStats& entry)
+string AsiyaScorer::execCommand(string cmd)
 {
-    cout << "asiya prepare stats. " << text << endl;
-    if (sid >= m_reference_files.size())
-    {
-        stringstream msg;
-        msg << "Sentence id (" << sid << ") not found in reference set";
-        throw runtime_error(msg.str());
-    }
-
-    // initialize the stats for this line
-    vector<ScoreStatsType> stats(1); // this is an array for all the array of metric scores. now only one.
-
-    //run asiya here
-    // create the config file
-    // create the command call
-    // read the output and save it in the stats
-
-    stats[0] = 1; //todo. what shuld be the initialization value?
-    entry.set(stats);
-}
-
-std::string executeCommand(char* cmd) {
-    FILE* pipe = popen(cmd, "r");
+    FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) return "ERROR";
     char buffer[128];
-    std::string result = "";
+    string result = "";
     while(!feof(pipe)) {
         if(fgets(buffer, 128, pipe) != NULL)
             result += buffer;
     }
     pclose(pipe);
     return result;
+}
+
+
+void AsiyaScorer::prepareStats(size_t sid, const string& text, ScoreStats& entry)
+{
+    //just add a sentence to the condidate list.
+    std::ostringstream s;
+    s << sid;
+    const string sidStr(s.str());
+    addCandidateSentence(sidStr, text);
+
+//    cout << "asiya prepare stats. " << text << endl;
+//    if (sid >= m_reference_files.size())
+//    {
+//        stringstream msg;
+//        msg << "Sentence id (" << sid << ") not found in reference set";
+//        throw runtime_error(msg.str());
+//    }
+
+//    // initialize the stats for this line
+//    vector<ScoreStatsType> stats(1); // this is an array for all the array of metric scores. now only one.
+
+//    //run asiya here
+//    // create the config file
+//    // create the command call
+//    // read the output and save it in the stats
+
+//    stats[0] = 1; //todo. what shuld be the initialization value?
+//    entry.set(stats);
+}
+
+float AsiyaScorer::score(const candidates_t& candidates)
+{
+    doScoring();
+    if (!scores.empty())
+        return this->scores[0];
+    else
+        return -1;
+    cout << "SCORE:" << this->scores[0];
 }
 
 }

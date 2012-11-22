@@ -70,9 +70,9 @@ void DataAsiya::loadNBest(const string &file)
       sentence += "|||";
       sentence += alignment;
     }
-//    cout << "calling prepare stats for sentence index " << sentence_index << endl;
     // prepare stats gets all the scores for sentence_i of sentence_index
-    a_scorer->addCandidateSentence(sentence_index, sentence);
+//    a_scorer->addCandidateSentence(sentence_index, sentence);
+    a_scorer->prepareStats(atoi(sentence_index.c_str()), sentence, scoreentry);
 
     m_score_data->add(scoreentry, sentence_index);
     // examine first line for name of features
@@ -82,9 +82,9 @@ void DataAsiya::loadNBest(const string &file)
     AddFeatures(feature_str, sentence_index);
   }
   inp.close();
-  cout << " do scoring " << endl;
-
-  a_scorer->doScoring( m_score_data );
+    candidates_t cand;
+    a_scorer->score(cand);
+//  a_scorer->doScoring( m_score_data );
 
   //score each sentence
   //a_scorer->prepareStats(sentence_index, sentence, scoreentry);

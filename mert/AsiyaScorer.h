@@ -40,12 +40,13 @@ public:
   const std::vector<Reference*>& GetReferences() const { return m_references.get(); }
   int CalcReferenceLength(std::size_t sentence_id, std::size_t length);
 
-  virtual void doScoring( ScoreDataHandle m_score_data );
+  virtual void doScoring();
   virtual statscore_t calculateScore(const std::vector<int>& comps) const;
   virtual std::size_t NumberOfScores() const { return 1; }
 
   virtual void addCandidateSentence(const std::string& sid, const std::string& sentence);
   virtual void prepareStats(std::size_t sindex, const std::string& text, ScoreStats& entry);
+  float score(const candidates_t& candidates);
 
 private:
   ScopedVector<Reference> m_references;
@@ -70,13 +71,12 @@ private:
   AsiyaScorer(const AsiyaScorer&);
   AsiyaScorer& operator=(const AsiyaScorer&);
 
+  std::string execCommand(std::string cmd);
   void writeCandidateFile();
   void writeConfigFile();
   void writeReferenceFiles();
   void callAsiya();
   void readscores(std::string commandOutput);
-  std::string executeCommand(char* cmd);
-
 };
 
 

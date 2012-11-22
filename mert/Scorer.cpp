@@ -134,7 +134,9 @@ string Scorer::applyFilter(const string& sentence) const
   }
 }
 
-float Scorer::score(const candidates_t& candidates) const {
+float Scorer::score(const candidates_t& candidates)
+{
+    cout << "Scorer::score";
   diffs_t diffs;
   statscores_t scores;
   score(candidates, diffs, scores);

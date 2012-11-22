@@ -83,7 +83,7 @@ class Scorer
    * Calculate the score of the sentences corresponding to the list of candidate
    * indices. Each index indicates the 1-best choice from the n-best list.
    */
-  float score(const candidates_t& candidates) const; 
+  virtual float score(const candidates_t& candidates);
 
   const std::string& getName() const {
     return m_name;
