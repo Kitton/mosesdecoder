@@ -24,8 +24,8 @@ DEPENDPATH += . \
               mert/TER \
               misc/pmoses \
               moses/src \
-              moses-chart-cmd/src \
-              moses-cmd/src \
+              moses-chart-cmd \
+              moses-cmd \
               phrase-extract/extract-ghkm \
               phrase-extract/lexical-reordering \
               phrase-extract/pcfg-common \
@@ -70,8 +70,8 @@ INCLUDEPATH += . \
                moses/src/fuzzy-match \
                contrib/synlm/hhmm/wsjparse/include \
                contrib/synlm/hhmm/rvtl/include \
-               moses-chart-cmd/src \
-               moses-cmd/src \
+               moses-chart-cmd \
+               moses-cmd \
                phrase-extract/extract-ghkm \
                phrase-extract/lexical-reordering \
                phrase-extract/pcfg-common \
@@ -397,15 +397,15 @@ HEADERS += biconcor/Alignment.h \
            moses/src/WordsBitmap.h \
            moses/src/WordsRange.h \
            moses/src/XmlOption.h \
-           moses-chart-cmd/src/IOWrapper.h \
-           moses-chart-cmd/src/Main.h \
-           moses-chart-cmd/src/mbr.h \
-           moses-chart-cmd/src/TranslationAnalysis.h \
-           moses-cmd/src/IOWrapper.h \
-           moses-cmd/src/LatticeMBR.h \
-           moses-cmd/src/Main.h \
-           moses-cmd/src/mbr.h \
-           moses-cmd/src/TranslationAnalysis.h \
+           moses-chart-cmd/IOWrapper.h \
+           moses-chart-cmd/Main.h \
+           moses-chart-cmd/mbr.h \
+           moses-chart-cmd/TranslationAnalysis.h \
+           moses-cmd/IOWrapper.h \
+           moses-cmd/LatticeMBR.h \
+           moses-cmd/Main.h \
+           moses-cmd/mbr.h \
+           moses-cmd/TranslationAnalysis.h \
            phrase-extract/extract-ghkm/Alignment.h \
            phrase-extract/extract-ghkm/AlignmentGraph.h \
            phrase-extract/extract-ghkm/ComposedRule.h \
@@ -876,16 +876,16 @@ SOURCES += biconcor/Alignment.cpp \
            moses/src/WordsBitmap.cpp \
            moses/src/WordsRange.cpp \
            moses/src/XmlOption.cpp \
-           moses-chart-cmd/src/IOWrapper.cpp \
-           moses-chart-cmd/src/Main.cpp \
-           moses-chart-cmd/src/mbr.cpp \
-           moses-chart-cmd/src/TranslationAnalysis.cpp \
-           moses-cmd/src/IOWrapper.cpp \
-           moses-cmd/src/LatticeMBR.cpp \
-           moses-cmd/src/LatticeMBRGrid.cpp \
-           moses-cmd/src/Main.cpp \
-           moses-cmd/src/mbr.cpp \
-           moses-cmd/src/TranslationAnalysis.cpp \
+           moses-chart-cmd/IOWrapper.cpp \
+           moses-chart-cmd/Main.cpp \
+           moses-chart-cmd/mbr.cpp \
+           moses-chart-cmd/TranslationAnalysis.cpp \
+           moses-cmd/IOWrapper.cpp \
+           moses-cmd/LatticeMBR.cpp \
+           moses-cmd/LatticeMBRGrid.cpp \
+           moses-cmd/Main.cpp \
+           moses-cmd/mbr.cpp \
+           moses-cmd/TranslationAnalysis.cpp \
            phrase-extract/extract-ghkm/Alignment.cpp \
            phrase-extract/extract-ghkm/AlignmentGraph.cpp \
            phrase-extract/extract-ghkm/ComposedRule.cpp \

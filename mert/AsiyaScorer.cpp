@@ -224,14 +224,13 @@ void AsiyaScorer::writeConfigFile()
 void AsiyaScorer::callAsiya()
 {
     // ~/perl ../../../operador/asiya/bin/Asiya.pl -eval single -m BLEU ./Asiya.config
-    string perl_location = "~/perl ";
+    string perl_location = "perl ";
     string asiya_location = " ~/../operador/asiya//bin/Asiya.pl ";
-    string asiya_config_location = " Asiya.config ";
     string params = " -eval single -m BLEU -g sys -s smatrix";
     string run_command;
-    run_command = perl_location + asiya_location + asiya_config_location + params;
+    run_command = perl_location + asiya_location + " " +  m_config_file + " " + params;
     //stderr->stdout
-    run_command += + " 2>&1";
+    run_command += " 2>&1";
 
     string result = execCommand(run_command);
     readscores(result);
