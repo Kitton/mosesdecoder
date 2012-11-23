@@ -47,8 +47,13 @@ SuffixArray::SuffixArray( string fileName )
 		SAFE_GETLINE((*fileP), line, LINE_MAX_LENGTH, '\n');
 		if (fileP->eof()) break;
 		vector< WORD_ID > words = m_vcb.Tokenize( line );
-		vector< WORD_ID >::const_iterator i;
+
+		// add to corpus vector
+		corpus.push_back(words);
+
+		// create SA
 		
+		vector< WORD_ID >::const_iterator i;
 		for( i=words.begin(); i!=words.end(); i++)
 		{
 			m_index[ wordIndex ] = wordIndex;
@@ -240,7 +245,7 @@ void SuffixArray::List(INDEX start, INDEX end)
 		// cerr << i << ":" << pos << "\t";
 		for(int j=0; j<5 && j+pos<m_size; j++)
 		{
-			cout << " " << m_vcb.GetWord( m_array[ pos+j ] );
+			//cout << " " << m_vcb.GetWord( m_array[ pos+j ] );
 		}
 		// cerr << "\n";
 	}

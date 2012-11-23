@@ -139,9 +139,10 @@ raw-stem = $wmt12-data/training/undoc.2000.$pair-extension
 lm-training = $srilm-dir/ngram-count
 settings = "-interpolate -kndiscount -unk"
 
-# irstlm
-#lm-training = "$moses-script-dir/generic/trainlm-irst.perl -cores $cores -irst-dir $irstlm-dir -temp-dir $working-dir/lm"
-#settings = "-s improved-kneser-ney"
+# irstlm training
+# msb = modified kneser ney; p=0 no singleton pruning
+#lm-training = "$moses-script-dir/generic/trainlm-irst2.perl -cores $cores -irst-dir $irstlm-dir -temp-dir $working-dir/tmp"
+#settings = "-s msb -p 0"
 
 # order of the language model
 order = 5
@@ -351,6 +352,7 @@ lexicalized-reordering = msd-bidirectional-fe
 ### settings for rule extraction
 #
 #extract-settings = ""
+max-phrase-length = 5
 
 ### unknown word labels (target syntax only)
 # enables use of unknown word labels during decoding
@@ -380,6 +382,12 @@ score-settings = "--GoodTuring"
 # point to reordering table
 #
 # reordering-table = 
+
+### filtering the phrase table based on significance tests
+# Johnson, Martin, Foster and Kuhn. (2007): "Improving Translation Quality by Discarding Most of the Phrasetable"
+# options: -n number of translations; -l 'a+e', 'a-e', or a positive real value -log prob threshold
+#salm-index = /path/to/project/salm/Bin/Linux/Index/IndexSA.O64
+#sigtest-filter = "-l a+e -n 20"
 
 ### if training should be skipped, 
 # point to a configuration file that contains
