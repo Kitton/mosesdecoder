@@ -18,55 +18,6 @@ void usage();
 
 typedef unsigned int uint;
 
-void Tokenize(OnDiskPt::Phrase &phrase
-              , const std::string &token, bool addSourceNonTerm, bool addTargetNonTerm
-              , OnDiskPt::OnDiskWrapper &onDiskWrapper)
-{
-
-  bool nonTerm = false;
-  size_t tokSize = token.size();
-  int comStr =token.compare(0, 1, "[");
-
-  if (comStr == 0) {
-    comStr = token.compare(tokSize - 1, 1, "]");
-    nonTerm = comStr == 0;
-  }
-
-  if (nonTerm) {
-    // non-term
-    size_t splitPos		= token.find_first_of("[", 2);
-    string wordStr	= token.substr(0, splitPos);
-
-    if (splitPos == string::npos) {
-      // lhs - only 1 word
-      WordPtr word (new Word());
-      word->CreateFromString(wordStr, onDiskWrapper.GetVocab());
-      phrase.AddWord(word);
-    } else {
-      // source & target non-terms
-      if (addSourceNonTerm) {
-        WordPtr word( new Word());
-        word->CreateFromString(wordStr, onDiskWrapper.GetVocab());
-        phrase.AddWord(word);
-      }
-
-      wordStr = token.substr(splitPos, tokSize - splitPos);
-      if (addTargetNonTerm) {
-        WordPtr word(new Word());
-        word->CreateFromString(wordStr, onDiskWrapper.GetVocab());
-        phrase.AddWord(word);
-      }
-
-    }
-  } else {
-    // term
-    WordPtr word(new Word());
-    word->CreateFromString(token, onDiskWrapper.GetVocab());
-    phrase.AddWord(word);
-  }
-}
-
-
 int main(int argc, char **argv)
 {
   int tableLimit = 20;

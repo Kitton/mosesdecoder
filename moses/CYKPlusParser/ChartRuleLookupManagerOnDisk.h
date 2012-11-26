@@ -24,7 +24,6 @@
 #include "OnDiskPt/OnDiskWrapper.h"
 
 #include "ChartRuleLookupManagerCYKPlus.h"
-#include "ChartParserCallback.h"
 #include "DotChartOnDisk.h"
 #include "moses/RuleTable/PhraseDictionaryOnDisk.h"
 #include "moses/ChartParserCallback.h"

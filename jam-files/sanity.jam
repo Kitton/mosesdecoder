@@ -70,13 +70,6 @@ rule test_library ( name ) {
   constant CLEANING : $(cleaning) ;
 }
 
-requirements = ;
-
-FORCE-STATIC = [ option.get "static" : : "yes" ] ;
-if $(FORCE-STATIC) {
-  requirements += <link>static <runtime-link>static ;
-}
-
 #Determine if a library can be compiled statically.  
 rule auto-shared ( name : additional * ) {
   additional ?= "" ;

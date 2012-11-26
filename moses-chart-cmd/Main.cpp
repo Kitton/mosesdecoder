@@ -40,17 +40,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <exception>
 #include <fstream>
 #include "Main.h"
-#include "DummyScoreProducers.h"
-#include "FactorCollection.h"
-#include "Manager.h"
-#include "Phrase.h"
-#include "Util.h"
-#include "Timer.h"
-#include "IOWrapper.h"
-#include "Sentence.h"
-#include "ConfusionNet.h"
-#include "WordLattice.h"
-#include "TreeInput.h"
 #include "TranslationAnalysis.h"
 #include "mbr.h"
 #include "IOWrapper.h"
@@ -261,6 +250,9 @@ static void ShowWeights()
 
 int main(int argc, char* argv[])
 {
+  string cmd = "-score-options \"--NoLex\" ";
+  cerr << cmd << endl;
+
   try {
     IFVERBOSE(1) {
       TRACE_ERR("command: ");

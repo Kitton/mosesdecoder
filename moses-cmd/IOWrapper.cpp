@@ -34,16 +34,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <stack>
-#include "TypeDef.h"
-#include "Util.h"
-#include "IOWrapper.h"
-#include "Hypothesis.h"
-#include "WordsRange.h"
-#include "TrellisPathList.h"
-#include "StaticData.h"
-#include "DummyScoreProducers.h"
-#include "FeatureVector.h"
-#include "InputFileStream.h"
 #include <boost/algorithm/string.hpp>
 
 #include "moses/TypeDef.h"

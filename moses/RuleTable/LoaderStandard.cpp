@@ -227,10 +227,6 @@ bool RuleTableLoaderStandard::Load(FormatType format
     // constituent labels
     Word sourceLHS, targetLHS;
 
-    // source
-    Phrase sourcePhrase( 0);
-    sourcePhrase.CreateFromStringNewFormat(Input, input, sourcePhraseString, factorDelimiter, sourceLHS);
-
     // create target phrase obj
     TargetPhrase *targetPhrase = new TargetPhrase();
     targetPhrase->CreateFromStringNewFormat(Output, output, targetPhraseString, factorDelimiter, targetLHS);
@@ -239,19 +235,14 @@ bool RuleTableLoaderStandard::Load(FormatType format
     targetPhrase->MutableSourcePhrase().CreateFromStringNewFormat(Input, input, sourcePhraseString, factorDelimiter, sourceLHS);
 
     // rest of target phrase
-    targetPhrase->SetAlignmentInfo(alignString, sourcePhrase);
+    targetPhrase->SetAlignmentInfo(alignString);
     targetPhrase->SetTargetLHS(targetLHS);
     
-    targetPhrase->SetRuleCount(ruleCountString, scoreVector[0]);
     //targetPhrase->SetDebugOutput(string("New Format pt ") + line);
     
-    // component score, for n-best output
-    std::transform(scoreVector.begin(),scoreVector.end(),scoreVector.begin(),TransformScore);
-    std::transform(scoreVector.begin(),scoreVector.end(),scoreVector.begin(),FloorScore);
-
     targetPhrase->SetScoreChart(ruleTable.GetFeature(), scoreVector, weight, languageModels,wpProducer);
 
-    TargetPhraseCollection &phraseColl = GetOrCreateTargetPhraseCollection(ruleTable, sourcePhrase, *targetPhrase, sourceLHS);
+    TargetPhraseCollection &phraseColl = GetOrCreateTargetPhraseCollection(ruleTable, targetPhrase->GetSourcePhrase(), *targetPhrase, sourceLHS);
     phraseColl.Add(targetPhrase);
 
     count++;

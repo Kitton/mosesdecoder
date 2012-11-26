@@ -37,11 +37,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "TranslationAnalysis.h"
 #include "IOWrapper.h"
-#include "LatticeMBR.h"
-#include "Manager.h"
-#include "StaticData.h"
-#include "Util.h"
-#include "Timer.h"
 #include "mbr.h"
 
 #include "moses/Hypothesis.h"
@@ -118,7 +113,6 @@ public:
     // execute the translation
     // note: this executes the search, resulting in a search graph
     //       we still need to apply the decision rule (MAP, MBR, ...)
-    if ((*m_source).GetSize() == 0) return;
     Manager manager(m_lineNumber, *m_source,staticData.GetSearchAlgorithm(), &system);
     manager.ProcessSentence();
 
