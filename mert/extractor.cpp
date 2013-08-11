@@ -226,9 +226,9 @@ cout << "exractor set reference files." << endl;
 
     PrintUserTime("Nbest entries loaded and scored");
     //ADDED_BY_TS
-    if (!option.allowDuplicates) {
-      data->removeDuplicates();
-    }
+//    if (!option.allowDuplicates) {
+//      data->removeDuplicates();
+//    }
     //END_ADDED
 
     cout << "exractor save. feature data file: " << option.featureDataFile << ", score data file: " << option.scoreDataFile << endl;

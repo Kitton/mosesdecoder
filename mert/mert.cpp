@@ -359,7 +359,7 @@ int main(int argc, char **argv)
 
   scorer->setScoreData(data.getScoreData().get());
 
-  data.removeDuplicates();
+//  data.removeDuplicates();
 
   PrintUserTime("Data loaded");
 
