@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <sys/stat.h>
 
 #include "util/check.hh"
 #include "Reference.h"
@@ -16,6 +17,13 @@
 #include "ScoreData.h"
 #include "Data.h"
 #include "FileStream.h"
+
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -33,14 +41,27 @@ namespace MosesTuning
 {
 
 AsiyaScorer::AsiyaScorer(const string& config)
-    : StatisticsBasedScorer("Asiya", config),
+    : SentenceLevelScorer("Asiya", config),
       m_ref_length_type(CLOSEST),
-      m_source_file("./temp/trans.txt"),         //Fake source file
-      m_config_file("./temp/Asiya.config"),
-      m_translation_file("./temp/trans.txt"),
-      m_reference_file("./temp/ref.txt_")
+      m_dir("temp"),
+      minNormalization(-1),
+      maxNormalization(0)
 {
-    cout << "asiya constructor." << endl;
+    cout << "AsiyaScorer::AsiyaScorer" << endl;
+    m_source_file = m_dir + "/trans.txt";        //Fake source file
+    m_config_file = m_dir + "/Asiya.config";
+    m_translation_file = m_dir + "/trans.txt";
+    m_reference_file = m_dir + "/ref.txt_";
+
+    std::ifstream in("../asiya.metric");
+    in >> used_metric;
+    in.close();
+
+    needToNormalizeScores = false;
+    //if scores aren't in interval [0;1] normalize it to it.
+//    if ( used_metric.find("-WER")!=string::npos || used_metric.find("-TER")!=string::npos || used_metric.find("-PER")!=string::npos )
+//        needToNormalizeScores = true;
+
     //todo. save from config the source file and save it!
     const string reflen = getConfig(KEY_REFLEN, REFLEN_CLOSEST);
     if (reflen == REFLEN_AVERAGE) {
@@ -75,13 +96,19 @@ void AsiyaScorer::setReferenceFiles(const vector<string>& referenceFiles)
 
 statscore_t AsiyaScorer::calculateScore(const vector<int>& comps) const
 {
-    float logasiya = 0.0;
-    // reflength divided by test length
-    //todo. read it from the scores file
-    return exp(logasiya);
+    double result = double(comps[0])/1000000.;
+
+    return result;
 }
 
-void AsiyaScorer::addCandidateSentence(const string& sid, const string& sentence )
+float calculateAsiyaScore(const vector<float>& stats)
+{
+    double result = double(stats[0] + 1)/1000000.;
+
+    return result;
+}
+
+void AsiyaScorer::addCandidateSentence(const string& sid, const string& sentence)
 {
     int last_i = m_candidate_sentences.size();
     int idx = atoi( sid.c_str() );
@@ -94,8 +121,35 @@ void AsiyaScorer::addCandidateSentence(const string& sid, const string& sentence
     m_candidate_sentences[idx].push_back(sentence);
 }
 
+std::vector<std::vector <ScoreStats> > AsiyaScorer::getAllScoreStats()
+{
+    std::vector<std::vector <ScoreStats> > result;
+    int current_vector = -1;
+
+    for (int i = 0; i < scores.size(); ++i)
+    {
+        if (i%m_candidate_sentences[0].size() == 0)
+        {
+            ++current_vector;
+            std::vector <ScoreStats> vec;
+            result.push_back(vec);
+        }
+
+        vector<ScoreStatsType> stats;
+        stats.push_back(int(scores[i]*1000000));
+        ScoreStats entry;
+        entry.set(stats);
+
+        result[current_vector].push_back(entry);
+    }
+    return result;
+}
+
 void AsiyaScorer::doScoring()
 {
+    if (m_candidate_sentences.empty())
+        return;
+    mkdir(m_dir.c_str(), 0777);
     writeReferenceFiles();
     writeCandidateFile();
     writeConfigFile();
@@ -121,7 +175,7 @@ void AsiyaScorer::readscores(string commandOutput)
 
     std::string line;
     //TODO change it later.
-    std::string searchedWord = "BLEU";
+    std::string searchedWord = "UNKNOWN_SET";
 
     while(std::getline(ss,line))
     {
@@ -129,8 +183,14 @@ void AsiyaScorer::readscores(string commandOutput)
         {
             std::stringstream ssLine(line);
             std::string set, doc, seg, metric, score;
-            ssLine >> set >> doc >> seg >> metric >> score;
+            ssLine >>set >> doc >> seg >> metric >> score;
             double temp = atof(score.c_str());
+            if (needToNormalizeScores) {
+                if (temp < minNormalization)
+                    temp = minNormalization;
+                temp = (temp - minNormalization)/(maxNormalization - minNormalization);
+            }
+
             scores.push_back(temp);
         }
     }
@@ -143,8 +203,7 @@ void AsiyaScorer::writeReferenceFiles()
         std::stringstream ss;
         ss << m_reference_file << i;
         string filename = ss.str();
-        ofstream file;
-        file.open((filename.c_str()));
+        ofstream file(filename.c_str());
         if (file.is_open())
         {
             inputfilestream inputRef(m_reference_files[i].c_str());
@@ -189,11 +248,7 @@ void AsiyaScorer::writeReferenceFiles()
 void AsiyaScorer::writeCandidateFile()
 {
     //Write all translations into one file.
-    std::stringstream ss;
-    ss << "./temp/trans.txt";
-    string candfilename = ss.str();
-    ofstream candfile;
-    candfile.open( candfilename.c_str() );
+    ofstream candfile(m_translation_file.c_str());
     if ( candfile.is_open() )
         for (size_t i = 0; i < m_candidate_sentences.size(); ++i)
             for (size_t j = 0; j < m_candidate_sentences[i].size(); ++j)
@@ -223,17 +278,66 @@ void AsiyaScorer::writeConfigFile()
 
 void AsiyaScorer::callAsiya()
 {
-    // ~/perl ../../../operador/asiya/bin/Asiya.pl -eval single -m BLEU ./Asiya.config
+    //perl  ~/../operador/asiya//bin/Asiya.pl  temp/Asiya.config  -eval single -m BLEU -g seg
     string perl_location = "perl ";
-    string asiya_location = " ~/../operador/asiya//bin/Asiya.pl ";
-    string params = " -eval single -m BLEU -g sys -s smatrix";
+    string asiya_location = " ~/../operador/asiya/bin/Asiya.pl ";
+    string evalType = "single";
+
+    //If a few metrics used - get a normalized mean.
+    if ( used_metric.find(",")!=string::npos )
+        evalType = "ulc";
+
+    string params = " -eval " + evalType + " -g seg -o smatrix -remake -m " + used_metric;
     string run_command;
     run_command = perl_location + asiya_location + " " +  m_config_file + " " + params;
     //stderr->stdout
     run_command += " 2>&1";
 
-    string result = execCommand(run_command);
-    readscores(result);
+    const int N_LINES_LIMIT = 5000; //limit for chunking
+    string lines = execCommand("wc -l " + m_translation_file);
+
+    ofstream logFile("temp/log.txt", ios::app);
+    logFile << "lines = " << lines;
+
+    int n_lines = atoi(lines.c_str());
+    if (n_lines > N_LINES_LIMIT){
+        //copy files
+        string com = "cp " + m_translation_file + " " + m_translation_file + "_copy";
+        execCommand(com);
+        string reference_file = m_reference_file + "0";
+        com = "cp " + reference_file + " " + reference_file + "_copy";
+        execCommand(com);
+
+        int begin = 0;
+        while (true) {
+            int tail = n_lines - begin;
+            stringstream ss;
+            ss << tail;
+            string tail_str = ss.str();
+
+            ss.str(std::string());
+            ss << N_LINES_LIMIT;
+            string head_str = ss.str();
+            com = "tail -n " + tail_str + " " + m_translation_file + "_copy" + " | head -n " + head_str + " > " + m_translation_file;
+            execCommand(com);
+            com = "tail -n " + tail_str + " " + reference_file + "_copy" + " | head -n " + head_str + " > " + reference_file;
+            execCommand(com);
+
+            logFile << com << endl;
+
+            string result = execCommand(run_command);
+            readscores(result);
+
+            begin += N_LINES_LIMIT;
+            if (begin > n_lines)
+                break;
+        }
+    }
+    else {
+        string result = execCommand(run_command);
+        readscores(result);
+    }
+    logFile.close();
 }
 
 string AsiyaScorer::execCommand(string cmd)
@@ -279,15 +383,17 @@ void AsiyaScorer::prepareStats(size_t sid, const string& text, ScoreStats& entry
 //    entry.set(stats);
 }
 
-float AsiyaScorer::score(const candidates_t& candidates)
-{
-    doScoring();
-    if (!scores.empty())
-        return this->scores[0];
-    else
-        return -1;
-    cout << "SCORE:" << this->scores[0];
-}
+//float AsiyaScorer::score(const candidates_t& candidates)
+//{
+//    doScoring();
+//    float score;
+//    if (!scores.empty())
+//        score = this->scores[0];
+//    else
+//        score = -1;
+//    cout << "SCORE: " << score << endl;
+//    return score;
+//}
 
 }
 

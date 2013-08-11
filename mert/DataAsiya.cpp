@@ -74,16 +74,28 @@ void DataAsiya::loadNBest(const string &file)
 //    a_scorer->addCandidateSentence(sentence_index, sentence);
     a_scorer->prepareStats(atoi(sentence_index.c_str()), sentence, scoreentry);
 
-    m_score_data->add(scoreentry, sentence_index);
     // examine first line for name of features
     if (!existsFeatureNames()) {
       InitFeatureMap(feature_str);
     }
     AddFeatures(feature_str, sentence_index);
   }
+
+  a_scorer->doScoring();
+//  TRACE_ERR("before getAllScoreStats" << endl);
+
+  std::vector<std::vector <ScoreStats> > allScoreStats = a_scorer->getAllScoreStats();
+  for (int i = 0; i < allScoreStats.size(); ++i)
+      for(int j = 0; j < allScoreStats[i].size(); ++j)
+      {
+          stringstream ss;
+          ss << i;
+          m_score_data->add(allScoreStats[i][j], ss.str());
+//          TRACE_ERR("allScoreStats[" << i << "].size() " << allScoreStats[i].size() << " " << allScoreStats[i][j] << endl);
+      }
+
+
   inp.close();
-    candidates_t cand;
-    a_scorer->score(cand);
 //  a_scorer->doScoring( m_score_data );
 
   //score each sentence

@@ -7,10 +7,11 @@
 
 #include "Types.h"
 #include "ScoreData.h"
-#include "StatisticsBasedScorer.h"
+#include "SentenceLevelScorer.h"
 #include "ScopedVector.h"
 #include "Util.h"
 #include "Data.h"
+#include "ScoreStats.h"
 
 namespace MosesTuning
 {
@@ -23,7 +24,7 @@ class Reference;
 /**
  * Asiya scoring
  */
-class AsiyaScorer: public StatisticsBasedScorer
+class AsiyaScorer: public SentenceLevelScorer
 {
 public:
   enum ReferenceLengthType {
@@ -46,7 +47,7 @@ public:
 
   virtual void addCandidateSentence(const std::string& sid, const std::string& sentence);
   virtual void prepareStats(std::size_t sindex, const std::string& text, ScoreStats& entry);
-  float score(const candidates_t& candidates);
+  std::vector<std::vector <ScoreStats> > getAllScoreStats();
 
 private:
   ScopedVector<Reference> m_references;
@@ -63,8 +64,14 @@ private:
   std::string m_translation_file;
   //1st part of the name for files with reference translation.
   std::string m_reference_file;
+  std::string m_dir;
+  std::string used_metric;
+  bool needToNormalizeScores;
+  double minNormalization, maxNormalization; //borders for an initial normalization interval.
+
   // candidate sentences [sentence_idx][i_best]
-  std::vector<std::vector<std::string> > m_candidate_sentences;
+  typedef std::vector<std::string> stringVector;
+  std::vector<stringVector> m_candidate_sentences;
   std::vector<double> scores;
 
   // no copying allowed
@@ -79,6 +86,7 @@ private:
   void readscores(std::string commandOutput);
 };
 
+float calculateAsiyaScore(const std::vector<float>& stats);
 
 }
 
