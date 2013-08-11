@@ -41,6 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "BleuScorer.h"
 #include "FeatureDataIterator.h"
 #include "ScoreDataIterator.h"
+#include "AsiyaScorer.h"
 
 using namespace std;
 using namespace MosesTuning;
@@ -200,11 +201,13 @@ int main(int argc, char** argv)
     for(size_t  i=0; i<n_candidates; i++) {
       size_t rand1 = rand() % n_translations;
       pair<size_t,size_t> translation1 = hypotheses[rand1];
-      float bleu1 = sentenceLevelBleuPlusOne(scoreDataIters[translation1.first]->operator[](translation1.second));
+//      float bleu1 = sentenceLevelBleuPlusOne(scoreDataIters[translation1.first]->operator[](translation1.second));
+      float bleu1 = calculateAsiyaScore(scoreDataIters[translation1.first]->operator[](translation1.second));
 
       size_t rand2 = rand() % n_translations;
       pair<size_t,size_t> translation2 = hypotheses[rand2];
-      float bleu2 = sentenceLevelBleuPlusOne(scoreDataIters[translation2.first]->operator[](translation2.second));
+//      float bleu2 = sentenceLevelBleuPlusOne(scoreDataIters[translation2.first]->operator[](translation2.second));
+     float bleu2 = calculateAsiyaScore(scoreDataIters[translation2.first]->operator[](translation2.second));
 
       /*
       cerr << "t(" << translation1.first << "," << translation1.second << ") = " << bleu1 <<
