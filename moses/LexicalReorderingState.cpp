@@ -3,7 +3,7 @@
 #include <string>
 #include "util/check.hh"
 
-#include "FFState.h"
+#include "moses/FF/FFState.h"
 #include "Hypothesis.h"
 #include "WordsRange.h"
 #include "ReorderingStack.h"
@@ -128,7 +128,7 @@ void LexicalReorderingState::CopyScores(Scores& scores, const TranslationOption 
   // don't call this on a bidirectional object
   CHECK(m_direction == LexicalReorderingConfiguration::Backward || m_direction == LexicalReorderingConfiguration::Forward);
   const Scores *cachedScores = (m_direction == LexicalReorderingConfiguration::Backward) ?
-                               topt.GetCachedScores(m_configuration.GetScoreProducer()) : m_prevScore;
+                               topt.GetLexReorderingScores(m_configuration.GetScoreProducer()) : m_prevScore;
 
   // No scores available. TODO: Using a good prior distribution would be nicer.
   if(cachedScores == NULL)
@@ -212,7 +212,7 @@ LexicalReorderingState* PhraseBasedReorderingState::Expand(const TranslationOpti
   if (m_direction == LexicalReorderingConfiguration::Forward && m_first) {
     ClearScores(scores);
   } else {
-    if (!m_first || m_useFirstBackwardScore){
+    if (!m_first || m_useFirstBackwardScore) {
       if (modelType == LexicalReorderingConfiguration::MSD) {
         reoType = GetOrientationTypeMSD(currWordsRange);
       } else if (modelType == LexicalReorderingConfiguration::MSLR) {

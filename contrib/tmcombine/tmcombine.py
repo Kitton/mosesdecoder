@@ -15,7 +15,7 @@
 
 
 # Some general things to note:
-#  - Different combination algorithms require different statistics. To be on the safe side, use the options `-phrase-word-alignment` and `-write-lexical-counts` when training models.
+#  - Different combination algorithms require different statistics. To be on the safe side, use the option `-write-lexical-counts` when training models.
 #  - The script assumes that phrase tables are sorted (to allow incremental, more memory-friendly processing). sort with LC_ALL=C.
 #  - Some configurations require additional statistics that are loaded in memory (lexical tables; complete list of target phrases). If memory consumption is a problem, use the option --lowmem (slightly slower and writes temporary files to disk), or consider pruning your phrase table before combining (e.g. using Johnson et al. 2007).
 #  - The script can read/write gzipped files, but the Python implementation is slow. You're better off unzipping the files on the command line and working with the unzipped files.
@@ -129,7 +129,7 @@ class Moses():
                             joint_count_f2e = model_probabilities[i_f2e] * src_count
                     except:
                         sys.stderr.write(str(b" ||| ".join(line))+b'\n')
-                        sys.stderr.write('ERROR: counts are missing or misformatted. Maybe your phrase table is from an older Moses version that doesn\'t store counts?\n')
+                        sys.stderr.write('ERROR: counts are missing or misformatted. Maybe your phrase table is from an older Moses version that doesn\'t store counts or word alignment?\n')
                         raise
                     
                     i_e2f = flags['i_e2f']
@@ -148,8 +148,8 @@ class Moses():
                     self.phrase_source[src][i] = float(line[-1].split()[1])
                 except:
                     sys.stderr.write(str(line)+'\n')
-                    sys.stderr.write('Counts are missing. Maybe your phrase table is from an older Moses version that doesn\'t store counts?\n')
-                    return
+                    sys.stderr.write('ERROR: Counts are missing or misformatted. Maybe your phrase table is from an older Moses version that doesn\'t store counts or word alignment?\n')
+                    raise
             else:
                 self.phrase_source[src][i] = 1
                 
@@ -159,8 +159,8 @@ class Moses():
                     self.phrase_target[target][i] = float(line[-1].split()[0])
                 except:
                     sys.stderr.write(str(line)+'\n')
-                    sys.stderr.write('Counts are missing. Maybe your phrase table is from an older Moses version that doesn\'t store counts?\n')
-                    return
+                    sys.stderr.write('ERROR: Counts are missing or misformatted. Maybe your phrase table is from an older Moses version that doesn\'t store counts or word alignment?\n')
+                    raise
             else:
                 self.phrase_target[target][i] = 1
 
@@ -306,7 +306,7 @@ class Moses():
         # assuming that alignment is empty
         elif len(line) == 4:
             if self.require_alignment:
-                sys.stderr.write('Error: unexpected phrase table format. Your current configuration requires alignment information. Make sure you trained your model with -phrase-word-alignment\n')
+                sys.stderr.write('Error: unexpected phrase table format. Your current configuration requires alignment information. Make sure you trained your model with -phrase-word-alignment (default in newer Moses versions)\n')
                 exit()
             
             self.phrase_pairs[src][target][1] = [b'',line[3].lstrip(b'| ')]
@@ -1253,7 +1253,7 @@ def handle_file(filename,action,fileobj=None,mode='r'):
             else:
                 sys.stderr.write('Error: unable to open file. ' + filename + ' - aborting.\n')
                 
-                if 'counts' in filename and os.path.exists(os.path.isdir(filename)):
+                if 'counts' in filename and os.path.exists(os.path.dirname(filename)):
                     sys.stderr.write('For a weighted counts combination, we need statistics that Moses doesn\'t write to disk by default.\n')
                     sys.stderr.write('Repeat step 4 of Moses training for all models with the option -write-lexical-counts.\n')
                 

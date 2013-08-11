@@ -3,13 +3,13 @@
 //#include "LVoc.h" //need IPhrase
 
 #include "StaticData.h"
-#include "PhraseDictionary.h"
+#include "moses/TranslationModel/PhraseDictionary.h"
 #include "GenerationDictionary.h"
 #include "TargetPhrase.h"
 #include "TargetPhraseCollection.h"
 
 #ifndef WIN32
-#include "CompactPT/LexicalReorderingTableCompact.h"  
+#include "TranslationModel/CompactPT/LexicalReorderingTableCompact.h"
 #endif
 
 namespace Moses
@@ -52,14 +52,10 @@ void auxAppend(IPhrase& head, const IPhrase& tail)
 LexicalReorderingTable* LexicalReorderingTable::LoadAvailable(const std::string& filePath, const FactorList& f_factors, const FactorList& e_factors, const FactorList& c_factors)
 {
   //decide use Compact or Tree or Memory table
-#ifdef HAVE_CMPH
-  if(FileExists(filePath + ".minlexr")) {
-    LexicalReorderingTable *compactLexr =
-      LexicalReorderingTableCompact::CheckAndLoad(filePath + ".minlexr", f_factors, e_factors, c_factors);
-    if(compactLexr)
-      return compactLexr;
-  }
-#endif
+  LexicalReorderingTable *compactLexr =
+    LexicalReorderingTableCompact::CheckAndLoad(filePath + ".minlexr", f_factors, e_factors, c_factors);
+  if(compactLexr)
+    return compactLexr;
   if(FileExists(filePath+".binlexr.idx")) {
     //there exists a binary version use that
     return new LexicalReorderingTableTree(filePath, f_factors, e_factors, c_factors);
@@ -311,13 +307,6 @@ Scores LexicalReorderingTableTree::auxFindScoreForContext(const Candidates& cand
     return Scores();
   }
 }
-
-/*
-void LexicalReorderingTableTree::DbgDump(std::ostream* pout){
-  std::ostream& out = *pout;
-  //TODO!
-}
-*/
 
 void LexicalReorderingTableTree::InitializeForInput(const InputType& input)
 {

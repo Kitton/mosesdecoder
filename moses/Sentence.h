@@ -57,6 +57,7 @@ private:
   NonTerminalSet m_defaultLabelSet;
 
   void InitStartEndWord();
+  void ProcessPlaceholders(const std::vector< std::pair<size_t, std::string> > &placeholders);
 
 
 public:
@@ -90,7 +91,7 @@ public:
   int Read(std::istream& in,const std::vector<FactorType>& factorOrder);
   void Print(std::ostream& out) const;
 
-  TranslationOptionCollection* CreateTranslationOptionCollection(const TranslationSystem* system) const;
+  TranslationOptionCollection* CreateTranslationOptionCollection() const;
 
   void CreateFromString(const std::vector<FactorType> &factorOrder
                         , const std::string &phraseString

@@ -28,7 +28,6 @@ namespace Moses
 {
 
 class Sentence;
-class LMList;
 
 /** Holds all translation options, for all spans, of a particular sentence input
  * Inherited from TranslationOptionCollection.
@@ -38,7 +37,7 @@ class TranslationOptionCollectionText : public TranslationOptionCollection
 public:
   void ProcessUnknownWord(size_t sourcePos);
 
-  TranslationOptionCollectionText(const TranslationSystem* system, Sentence const& inputSentence, size_t maxNoTransOptPerCoverage, float translationOptionThreshold);
+  TranslationOptionCollectionText(Sentence const& inputSentence, size_t maxNoTransOptPerCoverage, float translationOptionThreshold);
 
   bool HasXmlOptionsOverlappingRange(size_t startPosition, size_t endPosition) const;
 
@@ -50,3 +49,4 @@ public:
 }
 
 #endif
+

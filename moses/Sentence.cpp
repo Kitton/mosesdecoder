@@ -23,7 +23,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdexcept>
 
 #include "Sentence.h"
-#include "PhraseDictionaryMemory.h"
 #include "TranslationOptionCollectionText.h"
 #include "StaticData.h"
 #include "Util.h"
@@ -105,26 +104,38 @@ int Sentence::Read(std::istream& in,const std::vector<FactorType>& factorOrder)
       this->SetTopicId(atol(topic_params[0].c_str()));
       this->SetUseTopicId(true);
       this->SetUseTopicIdAndProb(false);
-    }
-    else {
+    } else {
       this->SetTopicIdAndProb(topic_params);
       this->SetUseTopicId(false);
       this->SetUseTopicIdAndProb(true);
     }
+  }
+  if (meta.find("weight-setting") != meta.end()) {
+    this->SetWeightSetting(meta["weight-setting"]);
+    this->SetSpecifiesWeightSetting(true);
+  } else {
+    this->SetSpecifiesWeightSetting(false);
   }
 
   // parse XML markup in translation line
   //const StaticData &staticData = StaticData::Instance();
   std::vector<XmlOption*> xmlOptionsList(0);
   std::vector< size_t > xmlWalls;
+  std::vector< std::pair<size_t, std::string> > placeholders;
+
   if (staticData.GetXmlInputType() != XmlPassThrough) {
-    if (!ProcessAndStripXMLTags(line, xmlOptionsList, m_reorderingConstraint, xmlWalls, staticData.GetXmlBrackets().first, staticData.GetXmlBrackets().second)) {
+    if (!ProcessAndStripXMLTags(line, xmlOptionsList, m_reorderingConstraint, xmlWalls, placeholders,
+                                staticData.GetXmlBrackets().first, staticData.GetXmlBrackets().second)) {
       const string msg("Unable to parse XML in line: " + line);
       TRACE_ERR(msg << endl);
       throw runtime_error(msg);
     }
   }
-  Phrase::CreateFromString(factorOrder, line, factorDelimiter);
+
+  Phrase::CreateFromString(Input, factorOrder, line, factorDelimiter, NULL);
+
+  // placeholders
+  ProcessPlaceholders(placeholders);
 
   if (staticData.IsChart()) {
     InitStartEndWord();
@@ -146,7 +157,7 @@ int Sentence::Read(std::istream& in,const std::vector<FactorType>& factorOrder)
 
       const XmlOption *xmlOption = *iterXmlOpts;
 
-      TranslationOption *transOpt = new TranslationOption(xmlOption->range, xmlOption->targetPhrase, *this);
+      TranslationOption *transOpt = new TranslationOption(xmlOption->range, xmlOption->targetPhrase);
       m_xmlOptionsList.push_back(transOpt);
 
       for(size_t j=transOpt->GetSourceWordsRange().GetStartPos(); j<=transOpt->GetSourceWordsRange().GetEndPos(); j++) {
@@ -158,6 +169,7 @@ int Sentence::Read(std::istream& in,const std::vector<FactorType>& factorOrder)
 
   }
 
+  // reordering walls and zones
   m_reorderingConstraint.InitializeWalls( GetSize() );
 
   // set reordering walls, if "-monotone-at-punction" is set
@@ -189,12 +201,28 @@ void Sentence::InitStartEndWord()
   AddWord(endWord);
 }
 
+void Sentence::ProcessPlaceholders(const std::vector< std::pair<size_t, std::string> > &placeholders)
+{
+  FactorType factorType = StaticData::Instance().GetPlaceholderFactor();
+  if (factorType == NOT_FOUND) {
+    return;
+  }
+
+  for (size_t i = 0; i < placeholders.size(); ++i) {
+    size_t pos = placeholders[i].first;
+    const string &str = placeholders[i].second;
+    const Factor *factor = FactorCollection::Instance().AddFactor(str);
+    Word &word = Phrase::GetWord(pos);
+    word[factorType] = factor;
+  }
+}
+
 TranslationOptionCollection*
-Sentence::CreateTranslationOptionCollection(const TranslationSystem* system) const
+Sentence::CreateTranslationOptionCollection() const
 {
   size_t maxNoTransOptPerCoverage = StaticData::Instance().GetMaxNoTransOptPerCoverage();
   float transOptThreshold = StaticData::Instance().GetTranslationOptionThreshold();
-  TranslationOptionCollection *rv= new TranslationOptionCollectionText(system, *this, maxNoTransOptPerCoverage, transOptThreshold);
+  TranslationOptionCollection *rv= new TranslationOptionCollectionText(*this, maxNoTransOptPerCoverage, transOptThreshold);
   CHECK(rv);
   return rv;
 }
@@ -230,7 +258,7 @@ void Sentence::CreateFromString(const std::vector<FactorType> &factorOrder
                                 , const std::string &phraseString
                                 , const std::string &factorDelimiter)
 {
-  Phrase::CreateFromString(factorOrder, phraseString, factorDelimiter);
+  Phrase::CreateFromString(Input, factorOrder, phraseString, factorDelimiter, NULL);
 }
 
 

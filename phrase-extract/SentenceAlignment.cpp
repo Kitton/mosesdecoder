@@ -54,10 +54,11 @@ bool SentenceAlignment::processSourceSentence(const char * sourceString, int, bo
   return true;
 }
 
-bool SentenceAlignment::create( char targetString[], char sourceString[], char alignmentString[], int sentenceID, bool boundaryRules)
+bool SentenceAlignment::create( char targetString[], char sourceString[], char alignmentString[], char weightString[], int sentenceID, bool boundaryRules)
 {
   using namespace std;
   this->sentenceID = sentenceID;
+  this->weightString = std::string(weightString);
 
   // process sentence strings and store in target and source members.
   if (!processTargetSentence(targetString, sentenceID, boundaryRules)) {
@@ -93,12 +94,12 @@ bool SentenceAlignment::create( char targetString[], char sourceString[], char a
       cerr << "T: " << targetString << endl << "S: " << sourceString << endl;
       return false;
     }
-    
+
     if (boundaryRules) {
       ++s;
       ++t;
     }
-    
+
     // cout << "alignmentSequence[i] " << alignmentSequence[i] << " is " << s << ", " << t << endl;
     if ((size_t)t >= target.size() || (size_t)s >= source.size()) {
       cerr << "WARNING: sentence " << sentenceID << " has alignment point (" << s << ", " << t << ") out of bounds (" << source.size() << ", " << target.size() << ")\n";
@@ -108,16 +109,16 @@ bool SentenceAlignment::create( char targetString[], char sourceString[], char a
     alignedToT[t].push_back( s );
     alignedCountS[s]++;
   }
-  
+
   if (boundaryRules) {
     alignedToT[0].push_back(0);
     alignedCountS[0]++;
-    
+
     alignedToT.back().push_back(alignedCountS.size() - 1);
     alignedCountS.back()++;
-    
+
   }
-  
+
   return true;
 }
 

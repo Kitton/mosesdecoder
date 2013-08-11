@@ -83,8 +83,8 @@ string TrimXml(const string& str, const std::string& lbrackStr, const std::strin
  */
 bool isXmlTag(const string& tag, const std::string& lbrackStr, const std::string& rbrackStr)
 {
-   return (tag.substr(0,lbrackStr.length()) == lbrackStr &&
-	   (tag[lbrackStr.length()] == '/' ||
+  return (tag.substr(0,lbrackStr.length()) == lbrackStr &&
+          (tag[lbrackStr.length()] == '/' ||
            (tag[lbrackStr.length()] >= 'a' && tag[lbrackStr.length()] <= 'z') ||
            (tag[lbrackStr.length()] >= 'A' && tag[lbrackStr.length()] <= 'Z')));
 }
@@ -111,7 +111,7 @@ vector<string> TokenizeXml(const string& str, const std::string& lbrackStr, cons
   // walk thorugh the string (loop vver cpos)
   while (cpos != str.size()) {
     // find the next opening "<" of an xml tag
-       lpos = str.find(lbrack, cpos);			// lpos = str.find_first_of(lbrack, cpos);
+    lpos = str.find(lbrack, cpos);			// lpos = str.find_first_of(lbrack, cpos);
     if (lpos != string::npos) {
       // find the end of the xml tag
       rpos = str.find(rbrack, lpos+lbrackStr.length()-1);			// rpos = str.find_first_of(rbrack, lpos);
@@ -149,10 +149,13 @@ vector<string> TokenizeXml(const string& str, const std::string& lbrackStr, cons
  * \param lbrackStr xml tag's left bracket string, typically "<"
  * \param rbrackStr xml tag's right bracket string, typically ">"
  */
-bool ProcessAndStripXMLTags(string &line, vector<XmlOption*> &res, ReorderingConstraint &reorderingConstraint, vector< size_t > &walls, 
-	const std::string& lbrackStr, const std::string& rbrackStr)
+bool ProcessAndStripXMLTags(string &line, vector<XmlOption*> &res, ReorderingConstraint &reorderingConstraint, vector< size_t > &walls,
+                            std::vector< std::pair<size_t, std::string> > &placeholders,
+                            const std::string& lbrackStr, const std::string& rbrackStr)
 {
   //parse XML markup in translation line
+
+  const StaticData &staticData = StaticData::Instance();
 
   // no xml tag? we're done.
 //if (line.find_first_of('<') == string::npos) {
@@ -172,8 +175,8 @@ bool ProcessAndStripXMLTags(string &line, vector<XmlOption*> &res, ReorderingCon
   string cleanLine; // return string (text without xml)
   size_t wordPos = 0; // position in sentence (in terms of number of words)
 
-  const vector<FactorType> &outputFactorOrder = StaticData::Instance().GetOutputFactorOrder();
-  const string &factorDelimiter = StaticData::Instance().GetFactorDelimiter();
+  const vector<FactorType> &outputFactorOrder = staticData.GetOutputFactorOrder();
+  const string &factorDelimiter = staticData.GetFactorDelimiter();
 
   // loop through the tokens
   for (size_t xmlTokenPos = 0 ; xmlTokenPos < xmlTokens.size() ; xmlTokenPos++) {
@@ -290,6 +293,16 @@ bool ProcessAndStripXMLTags(string &line, vector<XmlOption*> &res, ReorderingCon
           reorderingConstraint.SetZone( startPos, endPos-1 );
         }
 
+        // name-entity placeholder
+        else if (tagName == "ne") {
+          if (startPos != (endPos - 1)) {
+            TRACE_ERR("ERROR: Placeholder must only span 1 word: " << line << endl);
+            return false;
+          }
+          string entity = ParseXmlTagAttribute(tagContent,"entity");
+          placeholders.push_back(std::pair<size_t, std::string>(startPos, entity));
+        }
+
         // default: opening tag that specifies translation options
         else {
           if (startPos >= endPos) {
@@ -329,9 +342,11 @@ bool ProcessAndStripXMLTags(string &line, vector<XmlOption*> &res, ReorderingCon
           }
 
           // store translation options into members
-          if (StaticData::Instance().GetXmlInputType() != XmlIgnore) {
+          if (staticData.GetXmlInputType() != XmlIgnore) {
             // only store options if we aren't ignoring them
             for (size_t i=0; i<altTexts.size(); ++i) {
+              Phrase sourcePhrase; // TODO don't know what the source phrase is
+
               // set default probability
               float probValue = 1;
               if (altProbs.size() > 0) probValue = Scan<float>(altProbs[i]);
@@ -340,9 +355,10 @@ bool ProcessAndStripXMLTags(string &line, vector<XmlOption*> &res, ReorderingCon
 
               WordsRange range(startPos,endPos-1); // span covered by phrase
               TargetPhrase targetPhrase;
-              targetPhrase.CreateFromString(outputFactorOrder,altTexts[i],factorDelimiter);
-              targetPhrase.SetScore(scoreValue);
-              // TODO: targetPhrase.SetSourcePhrase() ?
+              targetPhrase.CreateFromString(Output, outputFactorOrder,altTexts[i],factorDelimiter, NULL);
+
+              targetPhrase.SetXMLScore(scoreValue);
+              targetPhrase.Evaluate(sourcePhrase);
 
               XmlOption *option = new XmlOption(range,targetPhrase);
               CHECK(option);

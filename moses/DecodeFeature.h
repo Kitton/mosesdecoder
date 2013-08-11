@@ -25,38 +25,49 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <vector>
 
 #include "FactorTypeSet.h"
-#include "FeatureFunction.h"
+#include "moses/FF/StatelessFeatureFunction.h"
 #include "TypeDef.h"
 
 namespace Moses
 {
 
 /**
-  * A feature on the decoding path (Generation or Translation)
-  * @todo don't quite understand what this is
+  * Baseclass for phrase-table or generation table feature function
  **/
-class DecodeFeature : public StatelessFeatureFunction {
+class DecodeFeature : public StatelessFeatureFunction
+{
 
-  public:
-    DecodeFeature(  const std::string& description,
-                    size_t numScoreComponents,
-                    const std::vector<FactorType> &input,
-                    const std::vector<FactorType> &output);
-    
-    //! returns output factor types as specified by the ini file
-    const FactorMask& GetOutputFactorMask() const;
-    
-    //! returns input factor types as specified by the ini file
-    const FactorMask& GetInputFactorMask() const;
-    
-    const std::vector<FactorType>& GetInput() const;
-    const std::vector<FactorType>& GetOutput() const;
-    
-  private:
-    std::vector<FactorType> m_input;
-    std::vector<FactorType> m_output;
-    FactorMask m_inputFactors;
-    FactorMask m_outputFactors;
+public:
+  DecodeFeature(  const std::string& description
+                  , const std::string &line);
+
+  DecodeFeature(  const std::string& description
+                  , size_t numScoreComponents
+                  , const std::string &line);
+
+  DecodeFeature(  const std::string& description
+                  , size_t numScoreComponents
+                  , const std::vector<FactorType> &input
+                  , const std::vector<FactorType> &output
+                  , const std::string &line);
+
+  //! returns output factor types as specified by the ini file
+  const FactorMask& GetOutputFactorMask() const;
+
+  //! returns input factor types as specified by the ini file
+  const FactorMask& GetInputFactorMask() const;
+
+  const std::vector<FactorType>& GetInput() const;
+  const std::vector<FactorType>& GetOutput() const;
+
+  bool IsUseable(const FactorMask &mask) const;
+  void SetParameter(const std::string& key, const std::string& value);
+
+protected:
+  std::vector<FactorType> m_input;
+  std::vector<FactorType> m_output;
+  FactorMask m_inputFactors;
+  FactorMask m_outputFactors;
 };
 
 }

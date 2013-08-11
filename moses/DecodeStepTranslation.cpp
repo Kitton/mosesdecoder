@@ -20,52 +20,48 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
 #include "DecodeStepTranslation.h"
-#include "PhraseDictionaryMemory.h"
 #include "TranslationOption.h"
 #include "TranslationOptionCollection.h"
 #include "PartialTranslOptColl.h"
 #include "FactorCollection.h"
 
+using namespace std;
+
 namespace Moses
 {
-DecodeStepTranslation::DecodeStepTranslation(const PhraseDictionaryFeature* pdf, const DecodeStep* prev)
-  : DecodeStep(pdf, prev)
+DecodeStepTranslation::DecodeStepTranslation(const PhraseDictionary* pdf,
+    const DecodeStep* prev,
+    const std::vector<FeatureFunction*> &features)
+  : DecodeStep(pdf, prev, features)
 {
-}
-
-
-TranslationOption *DecodeStepTranslation::MergeTranslation(const TranslationOption& oldTO, const TargetPhrase &targetPhrase) const
-{
-  if (IsFilteringStep()) {
-    if (!oldTO.IsCompatible(targetPhrase, m_conflictFactors)) return 0;
+  // don't apply feature functions that are from current phrase table.It should already have been
+  // dont by the phrase table.
+  const std::vector<FeatureFunction*> &pdfFeatures = pdf->GetFeaturesToApply();
+  for (size_t i = 0; i < pdfFeatures.size(); ++i) {
+    FeatureFunction *ff = pdfFeatures[i];
+    RemoveFeature(ff);
   }
-
-  TranslationOption *newTransOpt = new TranslationOption(oldTO);
-  newTransOpt->MergeNewFeatures(targetPhrase, targetPhrase.GetScoreBreakdown(), m_newOutputFactors);
-  return newTransOpt;
 }
 
-
-void DecodeStepTranslation::Process(const TranslationSystem* system
-                                    , const TranslationOption &inputPartialTranslOpt
+void DecodeStepTranslation::Process(const TranslationOption &inputPartialTranslOpt
                                     , const DecodeStep &decodeStep
                                     , PartialTranslOptColl &outputPartialTranslOptColl
                                     , TranslationOptionCollection *toc
-                                    , bool adhereTableLimit) const
+                                    , bool adhereTableLimit
+                                    , const Phrase &src) const
 {
   if (inputPartialTranslOpt.GetTargetPhrase().GetSize() == 0) {
     // word deletion
-
-    outputPartialTranslOptColl.Add(system, new TranslationOption(inputPartialTranslOpt));
-
+    outputPartialTranslOptColl.Add(new TranslationOption(inputPartialTranslOpt));
     return;
   }
 
   // normal trans step
   const WordsRange &sourceWordsRange        = inputPartialTranslOpt.GetSourceWordsRange();
   const PhraseDictionary* phraseDictionary  =
-    decodeStep.GetPhraseDictionaryFeature()->GetDictionary(); ;
-  const size_t currSize = inputPartialTranslOpt.GetTargetPhrase().GetSize();
+    decodeStep.GetPhraseDictionaryFeature();
+  const TargetPhrase &inPhrase = inputPartialTranslOpt.GetTargetPhrase();
+  const size_t currSize = inPhrase.GetSize();
   const size_t tableLimit = phraseDictionary->GetTableLimit();
 
   const TargetPhraseCollection *phraseColl=
@@ -77,13 +73,26 @@ void DecodeStepTranslation::Process(const TranslationSystem* system
 
     for (iterTargetPhrase = phraseColl->begin(); iterTargetPhrase != iterEnd; ++iterTargetPhrase) {
       const TargetPhrase& targetPhrase = **iterTargetPhrase;
+      const ScoreComponentCollection &transScores = targetPhrase.GetScoreBreakdown();
       // skip if the
       if (targetPhrase.GetSize() != currSize) continue;
 
-      TranslationOption *newTransOpt = MergeTranslation(inputPartialTranslOpt, targetPhrase);
-      if (newTransOpt != NULL) {
-        outputPartialTranslOptColl.Add(system, newTransOpt );
+      TargetPhrase outPhrase(inPhrase);
+
+      if (IsFilteringStep()) {
+        if (!inputPartialTranslOpt.IsCompatible(targetPhrase, m_conflictFactors))
+          continue;
       }
+
+      outPhrase.Merge(targetPhrase, m_newOutputFactors);
+      outPhrase.Evaluate(src, m_featuresToApply); // need to do this as all non-transcores would be screwed up
+
+
+      TranslationOption *newTransOpt = new TranslationOption(sourceWordsRange, outPhrase);
+      assert(newTransOpt != NULL);
+
+      outputPartialTranslOptColl.Add(newTransOpt );
+
     }
   } else if (sourceWordsRange.GetNumWordsCovered() == 1) {
     // unknown handler
@@ -92,12 +101,12 @@ void DecodeStepTranslation::Process(const TranslationSystem* system
 }
 
 
-void DecodeStepTranslation::ProcessInitialTranslation(const TranslationSystem* system
-    , const InputType &source
-    ,PartialTranslOptColl &outputPartialTranslOptColl
-    , size_t startPos, size_t endPos, bool adhereTableLimit) const
+void DecodeStepTranslation::ProcessInitialTranslation(
+  const InputType &source
+  ,PartialTranslOptColl &outputPartialTranslOptColl
+  , size_t startPos, size_t endPos, bool adhereTableLimit) const
 {
-  const PhraseDictionary* phraseDictionary = GetPhraseDictionaryFeature()->GetDictionary();
+  const PhraseDictionary* phraseDictionary = GetPhraseDictionaryFeature();
   const size_t tableLimit = phraseDictionary->GetTableLimit();
 
   const WordsRange wordsRange(startPos, endPos);
@@ -116,7 +125,9 @@ void DecodeStepTranslation::ProcessInitialTranslation(const TranslationSystem* s
 
     for (iterTargetPhrase = phraseColl->begin() ; iterTargetPhrase != iterEnd ; ++iterTargetPhrase) {
       const TargetPhrase	&targetPhrase = **iterTargetPhrase;
-      outputPartialTranslOptColl.Add (system, new TranslationOption(wordsRange, targetPhrase, source) );
+      TranslationOption *transOpt = new TranslationOption(wordsRange, targetPhrase);
+
+      outputPartialTranslOptColl.Add (transOpt);
 
       VERBOSE(3,"\t" << targetPhrase << "\n");
     }

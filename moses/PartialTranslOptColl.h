@@ -39,10 +39,12 @@ namespace Moses
  *  The expansion process itself may be still explode, so efficient handling
  *  of partial translation options during expansion is required.
  *  This class assists in this tasks by implementing pruning.
- *  This implementation is similar to the one in HypothesisStack. 
+ *  This implementation is similar to the one in HypothesisStack.
  */
 class PartialTranslOptColl
 {
+  friend std::ostream& operator<<(std::ostream& out, const PartialTranslOptColl& possibleTranslation);
+
 protected:
   std::vector<TranslationOption*> m_list;
   float m_bestScore; /**< score of the best translation option */
@@ -58,8 +60,8 @@ public:
     RemoveAllInColl( m_list );
   }
 
-  void AddNoPrune(const TranslationSystem* system, TranslationOption *partialTranslOpt);
-  void Add(const TranslationSystem* system, TranslationOption *partialTranslOpt);
+  void AddNoPrune(TranslationOption *partialTranslOpt);
+  void Add(TranslationOption *partialTranslOpt);
   void Prune();
 
   /** returns list of translation options */

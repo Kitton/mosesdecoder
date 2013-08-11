@@ -35,11 +35,11 @@ struct CompareTargetPhrase {
 
 void TargetPhraseCollection::NthElement(size_t tableLimit)
 {
-  vector<TargetPhrase*>::iterator
-  iterMiddle = (tableLimit == 0 || m_collection.size() < tableLimit) ?m_collection.end() : m_collection.begin() + tableLimit;
-
-  //std::sort(m_collection.begin(), m_collection.end(), CompareTargetPhrase());
-  std::nth_element(m_collection.begin(), iterMiddle, m_collection.end(), CompareTargetPhrase());
+  vector<TargetPhrase*>::iterator nth;
+  nth = (tableLimit && tableLimit <= m_collection.size()
+         ? m_collection.begin() + tableLimit
+         : m_collection.end());
+  std::nth_element(m_collection.begin(), nth, m_collection.end(), CompareTargetPhrase());
 }
 
 void TargetPhraseCollection::Prune(bool adhereTableLimit, size_t tableLimit)
@@ -59,13 +59,13 @@ void TargetPhraseCollection::Sort(bool adhereTableLimit, size_t tableLimit)
 {
   std::vector<TargetPhrase*>::iterator iterMiddle;
   iterMiddle = (tableLimit == 0 || m_collection.size() < tableLimit)
-             ? m_collection.end()
-             : m_collection.begin()+tableLimit;
+               ? m_collection.end()
+               : m_collection.begin()+tableLimit;
 
   std::partial_sort(m_collection.begin(), iterMiddle, m_collection.end(),
                     CompareTargetPhrase());
 
-  if (adhereTableLimit && m_collection.size() > tableLimit) {
+  if (adhereTableLimit && tableLimit && m_collection.size() > tableLimit) {
     for (size_t i = tableLimit; i < m_collection.size(); ++i) {
       TargetPhrase *targetPhrase = m_collection[i];
       delete targetPhrase;
@@ -74,6 +74,16 @@ void TargetPhraseCollection::Sort(bool adhereTableLimit, size_t tableLimit)
   }
 }
 
+std::ostream& operator<<(std::ostream &out, const TargetPhraseCollection &obj)
+{
+  TargetPhraseCollection::const_iterator iter;
+  for (iter = obj.begin(); iter != obj.end(); ++iter) {
+    const TargetPhrase &tp = **iter;
+    out << tp << endl;
+  }
+  return out;
 }
+
+} // namespace
 
 

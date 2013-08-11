@@ -7,12 +7,12 @@
 #include <functional>
 #include <sys/stat.h>
 #include "moses/TypeDef.h"
-#include "moses/PhraseDictionaryTree.h"
 #include "moses/ConfusionNet.h"
 #include "moses/FactorCollection.h"
 #include "moses/Phrase.h"
 #include "moses/InputFileStream.h"
 #include "moses/Timer.h"
+#include "moses/TranslationModel/PhraseDictionaryTree.h"
 
 using namespace std;
 using namespace Moses;
@@ -84,7 +84,7 @@ int main(int argc,char **argv)
 
     if(ftts.size()==1) {
       std::cerr<<"processing ptree for ";
-      PhraseDictionaryTree pdt(noScoreComponent);
+      PhraseDictionaryTree pdt;
 
       pdt.PrintWordAlignment(aligninfo);
 

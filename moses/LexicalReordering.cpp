@@ -1,73 +1,65 @@
 #include <sstream>
 
-#include "FFState.h"
+#include "moses/FF/FFState.h"
 #include "LexicalReordering.h"
 #include "LexicalReorderingState.h"
 #include "StaticData.h"
 
+using namespace std;
+
 namespace Moses
 {
-
-LexicalReordering::LexicalReordering(std::vector<FactorType>& f_factors,
-                                     std::vector<FactorType>& e_factors,
-                                     const LexicalReorderingConfiguration& configuration,
-                                     const std::string &filePath,
-                                     const std::vector<float>& weights)
-  : StatefulFeatureFunction("LexicalReordering_" + configuration.GetModelString(),
-                            configuration.GetNumScoreComponents()),
-    m_configuration(configuration)
+LexicalReordering::LexicalReordering(const std::string &line)
+  : StatefulFeatureFunction("LexicalReordering", line)
 {
-  m_configuration.SetScoreProducer(this);
-  std::cerr << "Creating lexical reordering...\n";
-  std::cerr << "weights: ";
-  for(size_t w = 0; w < weights.size(); ++w) {
-    std::cerr << weights[w] << " ";
+  std::cerr << "Initializing LexicalReordering.." << std::endl;
+
+  for (size_t i = 0; i < m_args.size(); ++i) {
+    const vector<string> &args = m_args[i];
+
+    if (args[0] == "type") {
+      m_configuration = new LexicalReorderingConfiguration(args[1]);
+      m_configuration->SetScoreProducer(this);
+      m_modelTypeString = m_configuration->GetModelString();
+    } else if (args[0] == "input-factor") {
+      m_factorsF =Tokenize<FactorType>(args[1]);
+    } else if (args[0] == "output-factor") {
+      m_factorsE =Tokenize<FactorType>(args[1]);
+    } else if (args[0] == "path") {
+      m_filePath = args[1];
+    } else {
+      throw "Unknown argument " + args[0];
+    }
   }
-  std::cerr << "\n";
 
-  m_modelTypeString = m_configuration.GetModelString();
-
-  switch(m_configuration.GetCondition()) {
+  switch(m_configuration->GetCondition()) {
   case LexicalReorderingConfiguration::FE:
   case LexicalReorderingConfiguration::E:
-    m_factorsE = e_factors;
     if(m_factorsE.empty()) {
-      UserMessage::Add("TL factor mask for lexical reordering is unexpectedly empty");
-      exit(1);
+      throw "TL factor mask for lexical reordering is unexpectedly empty";
     }
-    if(m_configuration.GetCondition() == LexicalReorderingConfiguration::E)
+    if(m_configuration->GetCondition() == LexicalReorderingConfiguration::E)
       break; // else fall through
   case LexicalReorderingConfiguration::F:
-    m_factorsF = f_factors;
     if(m_factorsF.empty()) {
-      UserMessage::Add("SL factor mask for lexical reordering is unexpectedly empty");
-      exit(1);
+      throw "SL factor mask for lexical reordering is unexpectedly empty";
     }
     break;
   default:
-    UserMessage::Add("Unknown conditioning option!");
-    exit(1);
+    throw "Unknown conditioning option!";
   }
-
-  size_t numberOfScoreComponents = m_configuration.GetNumScoreComponents();
-  if (weights.size() > numberOfScoreComponents) {
-    m_configuration.SetAdditionalScoreComponents(weights.size() - numberOfScoreComponents);
-  } else if(weights.size() < numberOfScoreComponents) {
-    std::ostringstream os;
-    os << "Lexical reordering model (type " << m_modelTypeString << "): expected " << numberOfScoreComponents << " weights, got " << weights.size() << std::endl;
-    UserMessage::Add(os.str());
-    exit(1);
-  }
-
-  const_cast<StaticData&>(StaticData::Instance()).SetWeights(this, weights);
-
-  m_table = LexicalReorderingTable::LoadAvailable(filePath, m_factorsF, m_factorsE, std::vector<FactorType>());
 }
 
 LexicalReordering::~LexicalReordering()
 {
   if(m_table)
     delete m_table;
+  delete m_configuration;
+}
+
+void LexicalReordering::Load()
+{
+  m_table = LexicalReorderingTable::LoadAvailable(m_filePath, m_factorsF, m_factorsE, std::vector<FactorType>());
 }
 
 Scores LexicalReordering::GetProb(const Phrase& f, const Phrase& e) const
@@ -90,8 +82,19 @@ FFState* LexicalReordering::Evaluate(const Hypothesis& hypo,
 
 const FFState* LexicalReordering::EmptyHypothesisState(const InputType &input) const
 {
-  return m_configuration.CreateLexicalReorderingState(input);
+  return m_configuration->CreateLexicalReorderingState(input);
 }
 
+bool LexicalReordering::IsUseable(const FactorMask &mask) const
+{
+  for (size_t i = 0; i < m_factorsE.size(); ++i) {
+    const FactorType &factor = m_factorsE[i];
+    if (!mask[factor]) {
+      return false;
+    }
+  }
+  return true;
+
+}
 }
 

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "moses/PhraseDictionaryTree.h"
+#include "moses/TranslationModel/PhraseDictionaryTree.h"
 #include "moses/Util.h"
 
 void usage();
@@ -33,15 +33,14 @@ int main(int argc, char **argv)
       needAlignments = true;
     } else if (!strcmp(argv[i], "-c")) {
       reportCounts = true;
-    }
-    else
+    } else
       usage();
   }
 
   if(ttable == "")
     usage();
 
-  Moses::PhraseDictionaryTree ptree(nscores);
+  Moses::PhraseDictionaryTree ptree;
   ptree.NeedAlignmentInfo(needAlignments);
   ptree.Read(ttable);
 

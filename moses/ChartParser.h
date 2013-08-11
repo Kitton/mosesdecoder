@@ -33,39 +33,39 @@ namespace Moses
 class ChartParserCallback;
 class ChartRuleLookupManager;
 class InputType;
-class TranslationSystem;
 class ChartCellCollectionBase;
 class Word;
 class Phrase;
 class TargetPhraseCollection;
 class DecodeGraph;
 
-class ChartParserUnknown {
-  public:
-    ChartParserUnknown(const TranslationSystem &system);
-    ~ChartParserUnknown();
+class ChartParserUnknown
+{
+public:
+  ChartParserUnknown();
+  ~ChartParserUnknown();
 
-    void Process(const Word &sourceWord, const WordsRange &range, ChartParserCallback &to);
+  void Process(const Word &sourceWord, const WordsRange &range, ChartParserCallback &to);
 
-  private:
-    const TranslationSystem &m_system;
-    std::vector<Phrase*> m_unksrcs;
-    std::list<TargetPhraseCollection*> m_cacheTargetPhraseCollection;
-    StackVec m_emptyStackVec;
+private:
+  std::vector<Phrase*> m_unksrcs;
+  std::list<TargetPhraseCollection*> m_cacheTargetPhraseCollection;
+  StackVec m_emptyStackVec;
 };
 
-class ChartParser {
-  public:
-    ChartParser(const InputType &source, const TranslationSystem &system, ChartCellCollectionBase &cells);
-    ~ChartParser();
+class ChartParser
+{
+public:
+  ChartParser(const InputType &source, ChartCellCollectionBase &cells);
+  ~ChartParser();
 
-    void Create(const WordsRange &range, ChartParserCallback &to);
+  void Create(const WordsRange &range, ChartParserCallback &to);
 
-  private:
-    ChartParserUnknown m_unknown;
-    std::vector <DecodeGraph*> m_decodeGraphList;
-    std::vector<ChartRuleLookupManager*> m_ruleLookupManagers;
-    InputType const& m_source; /**< source sentence to be translated */
+private:
+  ChartParserUnknown m_unknown;
+  std::vector <DecodeGraph*> m_decodeGraphList;
+  std::vector<ChartRuleLookupManager*> m_ruleLookupManagers;
+  InputType const& m_source; /**< source sentence to be translated */
 };
 
 }

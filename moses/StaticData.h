@@ -31,8 +31,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <utility>
 #include <fstream>
 #include <string>
+#include "UserMessage.h"
 
 #ifdef WITH_THREADS
+#include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #endif
 
@@ -40,40 +42,22 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "FactorCollection.h"
 #include "Parameter.h"
 #include "LM/Base.h"
-#include "LMList.h"
 #include "SentenceStats.h"
 #include "DecodeGraph.h"
 #include "TranslationOptionList.h"
-#include "TranslationSystem.h"
 #include "ScoreComponentCollection.h"
+#include "moses/TranslationModel/PhraseDictionary.h"
 
 namespace Moses
 {
 
 class InputType;
-class LexicalReordering;
-class GlobalLexicalModel;
-class GlobalLexicalModelUnlimited;
-class PhraseBoundaryFeature;
-class PhraseDictionaryFeature;
-class SparsePhraseDictionaryFeature;
-class PhrasePairFeature;
-class BleuScoreFeature;
-class PhraseLengthFeature;
-class TargetWordInsertionFeature;
-class SourceWordDeletionFeature;
-class WordTranslationFeature;
+class PhraseDictionary;
 class GenerationDictionary;
-class DistortionScoreProducer;
 class DecodeStep;
+class WordPenaltyProducer;
 class UnknownWordPenaltyProducer;
-class MetaScoreProducer;
-class TargetBigramFeature;
-class TargetNgramFeature;
-#ifdef HAVE_SYNLM
-class SyntacticLanguageModel;
-#endif
-class TranslationSystem;
+class InputFeature;
 
 typedef std::pair<std::string, float> UnknownLHSEntry;
 typedef std::vector<UnknownLHSEntry>  UnknownLHSList;
@@ -89,39 +73,23 @@ private:
 protected:
 
   std::map<long,Phrase> m_constraints;
-  std::vector<PhraseDictionaryFeature*>	m_phraseDictionary;
-  std::vector<SparsePhraseDictionaryFeature*>	m_sparsePhraseDictionary;
-  std::vector<GenerationDictionary*>	m_generationDictionary;
+  std::vector<PhraseDictionary*>	m_phraseDictionary;
+  std::vector<const GenerationDictionary*>	m_generationDictionary;
   Parameter *m_parameter;
   std::vector<FactorType>	m_inputFactorOrder, m_outputFactorOrder;
-  LMList									m_languageModel;
-  ScoreComponentCollection m_allWeights;
-  std::vector<LexicalReordering*>                   m_reorderModels;
-  std::vector<GlobalLexicalModel*>                   m_globalLexicalModels;
-  std::vector<GlobalLexicalModelUnlimited*>          m_globalLexicalModelsUnlimited;
-#ifdef HAVE_SYNLM
-	SyntacticLanguageModel* m_syntacticLanguageModel;
-#endif
+  mutable ScoreComponentCollection m_allWeights;
+
   std::vector<DecodeGraph*> m_decodeGraphs;
   std::vector<size_t> m_decodeGraphBackoff;
   // Initial	= 0 = can be used when creating poss trans
   // Other		= 1 = used to calculate LM score once all steps have been processed
-  std::map<std::string, TranslationSystem> m_translationSystems;
-  TargetBigramFeature *m_targetBigramFeature;
-  std::vector<TargetNgramFeature*> m_targetNgramFeatures;
-  PhraseBoundaryFeature *m_phraseBoundaryFeature;
-  PhraseLengthFeature* m_phraseLengthFeature;
-  TargetWordInsertionFeature* m_targetWordInsertionFeature;
-  SourceWordDeletionFeature* m_sourceWordDeletionFeature;
-  std::vector<WordTranslationFeature*> m_wordTranslationFeatures;
-  std::vector<PhrasePairFeature*> m_phrasePairFeatures;
   float
   m_beamWidth,
   m_earlyDiscardingThreshold,
   m_translationOptionThreshold,
   m_wordDeletionWeight;
 
-  
+
   // PhraseTrans, Generation & LanguageModelScore has multiple weights.
   int				m_maxDistortion;
   // do it differently from old pharaoh
@@ -137,14 +105,13 @@ protected:
   , m_nBestFactor
   , m_maxNoTransOptPerCoverage
   , m_maxNoPartTransOpt
-  , m_maxPhraseLength
-  , m_numLinkParams;
+  , m_maxPhraseLength;
 
   std::string
   m_constraintFileName;
 
   std::string									m_nBestFilePath, m_latticeSamplesFilePath;
-  bool                        m_fLMsLoaded, m_labeledNBestList,m_nBestIncludesSegmentation;
+  bool                        m_labeledNBestList,m_nBestIncludesSegmentation;
   bool m_dropUnknown; //! false = treat unknown words as unknowns, and translate them as themselves; true = drop (ignore) them
   bool m_wordDeletionEnabled;
 
@@ -158,27 +125,25 @@ protected:
   ParsingAlgorithm m_parsingAlgorithm;
   SearchAlgorithm m_searchAlgorithm;
   InputTypeEnum m_inputType;
-  size_t m_numInputScores;
 
   mutable size_t m_verboseLevel;
-  std::vector<WordPenaltyProducer*> m_wordPenaltyProducers;
-  std::vector<DistortionScoreProducer *> m_distortionScoreProducers;
+  WordPenaltyProducer* m_wpProducer;
   UnknownWordPenaltyProducer *m_unknownWordPenaltyProducer;
-  MetaFeatureProducer *m_metaFeatureProducer;
-  BleuScoreFeature* m_bleuScoreFeature;
+  const InputFeature *m_inputFeature;
+
   bool m_reportSegmentation;
+  bool m_reportSegmentationEnriched;
   bool m_reportAllFactors;
   bool m_reportAllFactorsNBest;
   std::string m_detailedTranslationReportingFilePath;
   bool m_onlyDistinctNBest;
+  bool m_PrintAlignmentInfo;
   bool m_needAlignmentInfo;
   bool m_PrintAlignmentInfoNbest;
 
   std::string m_alignmentOutputFile;
 
   std::string m_factorDelimiter; //! by default, |, but it can be changed
-  size_t m_maxFactorIdx[2];  //! number of factors on source and target side
-  size_t m_maxNumFactors;  //! max number of factors on both source and target sides
 
   XmlInputType m_xmlInputType; //! method for handling sentence XML input
   std::pair<std::string,std::string> m_xmlBrackets; //! strings to use as XML tags' opening and closing brackets. Default are "<" and ">"
@@ -203,7 +168,7 @@ protected:
   size_t m_timeout_threshold; //! seconds after which time out is activated
 
   bool m_useTransOptCache; //! flag indicating, if the persistent translation option cache should be used
-  mutable std::map<std::pair<size_t, Phrase>, std::pair<TranslationOptionList*,clock_t> > m_transOptCache; //! persistent translation option cache
+  mutable std::map<std::pair<std::pair<size_t, std::string>, Phrase>, std::pair<TranslationOptionList*,clock_t> > m_transOptCache; //! persistent translation option cache
   size_t m_transOptCacheMaxSize; //! maximum size for persistent translation option cache
   //FIXME: Single lock for cache not most efficient. However using a
   //reader-writer for LRU cache is tricky - how to record last used time?
@@ -216,6 +181,8 @@ protected:
   bool m_outputWordGraph; //! whether to output word graph
   bool m_outputSearchGraph; //! whether to output search graph
   bool m_outputSearchGraphExtended; //! ... in extended format
+  bool m_outputSearchGraphSLF; //! whether to output search graph in HTK standard lattice format (SLF)
+  bool m_outputSearchGraphHypergraph; //! whether to output search graph in hypergraph
 #ifdef HAVE_PROTOBUF
   bool m_outputSearchGraphPB; //! whether to output search graph as a protobuf
 #endif
@@ -241,47 +208,31 @@ protected:
 
   int m_threadCount;
   long m_startTranslationId;
-  
+
+  // alternate weight settings
+  mutable std::string m_currentWeightSetting;
+  std::map< std::string, ScoreComponentCollection* > m_weightSetting; // core weights
+  std::map< std::string, std::set< std::string > > m_weightSettingIgnoreFF; // feature function
+  std::map< std::string, std::set< size_t > > m_weightSettingIgnoreDP; // decoding path
+
+  FactorType m_placeHolderFactor;
+
   StaticData();
 
-
-
-  void LoadPhraseBasedParameters();
   void LoadChartDecodingParameters();
   void LoadNonTerminals();
 
   //! helper fn to set bool param from ini file/command line
   void SetBooleanParameter(bool *paramter, std::string parameterName, bool defaultValue);
-  //! load all language models as specified in ini file
-  bool LoadLanguageModels();
-#ifdef HAVE_SYNLM
-  //! load syntactic language model
-	bool LoadSyntacticLanguageModel();
-#endif
-  //! load not only the main phrase table but also any auxiliary tables that depend on which features are being used (e.g., word-deletion, word-insertion tables)
-  bool LoadPhraseTables();
-  //! load all generation tables as specified in ini file
-  bool LoadGenerationTables();
+
   //! load decoding steps
   bool LoadDecodeGraphs();
-  bool LoadLexicalReorderingModel();
-  bool LoadGlobalLexicalModel();
-  bool LoadGlobalLexicalModelUnlimited();
-  //References used for scoring feature (eg BleuScoreFeature) for online training
-  bool LoadReferences();
-  bool LoadDiscrimLMFeature();
-  bool LoadPhraseBoundaryFeature();
-  bool LoadPhrasePairFeature();
-  bool LoadPhraseLengthFeature();
-  bool LoadTargetWordInsertionFeature();
-  bool LoadSourceWordDeletionFeature();
-  bool LoadWordTranslationFeature();
 
   void ReduceTransOptCache() const;
   bool m_continuePartialTranslation;
 
   std::string m_binPath;
-  
+
 public:
 
   bool IsAlwaysCreateDirectTranslationOption() const {
@@ -357,9 +308,6 @@ public:
   bool IsWordDeletionEnabled() const {
     return m_wordDeletionEnabled;
   }
-  BleuScoreFeature* GetBleuScoreFeature() const {
-  	return m_bleuScoreFeature;
-  }
   size_t GetMaxHypoStackSize() const {
     return m_maxHypoStackSize;
   }
@@ -400,24 +348,16 @@ public:
     return m_translationOptionThreshold;
   }
 
-  const TranslationSystem& GetTranslationSystem(std::string id) const {
-    std::map<std::string, TranslationSystem>::const_iterator iter =
-      m_translationSystems.find(id);
-    if (iter == m_translationSystems.end()) {
-      VERBOSE(1, "Translation system not found " << id << std::endl);
-      throw std::runtime_error("Unknown translation system id");
-    } else {
-      return iter->second;
-    }
-  }
   size_t GetVerboseLevel() const {
     return m_verboseLevel;
   }
   void SetVerboseLevel(int x) const {
     m_verboseLevel = x;
   }
-  bool GetReportSegmentation() const {
-    return m_reportSegmentation;
+  char GetReportSegmentation() const {
+    if (m_reportSegmentation) return 1;
+    if (m_reportSegmentationEnriched) return 2;
+    return 0;
   }
   bool GetReportAllFactors() const {
     return m_reportAllFactors;
@@ -434,18 +374,15 @@ public:
   bool IsLabeledNBestList() const {
     return m_labeledNBestList;
   }
-  
+
   bool UseMinphrInMemory() const {
-     return m_minphrMemory;
+    return m_minphrMemory;
   }
 
   bool UseMinlexrInMemory() const {
-     return m_minlexrMemory;
+    return m_minlexrMemory;
   }
-  
-  size_t GetNumLinkParams() const {
-    return m_numLinkParams;
-  }
+
   const std::vector<std::string> &GetDescription() const {
     return m_parameter->GetParam("description");
   }
@@ -458,7 +395,7 @@ public:
     return m_nBestFilePath;
   }
   bool IsNBestEnabled() const {
-    return (!m_nBestFilePath.empty()) || m_mbr || m_useLatticeMBR || m_mira || m_outputSearchGraph || m_useConsensusDecoding || !m_latticeSamplesFilePath.empty()
+    return (!m_nBestFilePath.empty()) || m_mbr || m_useLatticeMBR || m_mira || m_outputSearchGraph || m_outputSearchGraphSLF || m_outputSearchGraphHypergraph || m_useConsensusDecoding || !m_latticeSamplesFilePath.empty()
 #ifdef HAVE_PROTOBUF
            || m_outputSearchGraphPB
 #endif
@@ -479,7 +416,7 @@ public:
     return m_outputWordGraph;
   }
 
-  //! Sets the global score vector weights for a given ScoreProducer.
+  //! Sets the global score vector weights for a given FeatureFunction.
   InputTypeEnum GetInputType() const {
     return m_inputType;
   }
@@ -492,28 +429,19 @@ public:
   bool IsChart() const {
     return m_searchAlgorithm == ChartDecoding || m_searchAlgorithm == ChartIncremental;
   }
-  LMList GetLMList() const { 
-    return m_languageModel; 
+  const WordPenaltyProducer *GetWordPenaltyProducer() const {
+    return m_wpProducer;
   }
-  WordPenaltyProducer* GetFirstWordPenaltyProducer() const {
-    assert(m_wordPenaltyProducers.size() >= 1);
-    return m_wordPenaltyProducers[0];
+  WordPenaltyProducer *GetWordPenaltyProducer() { // for mira
+    return m_wpProducer;
   }
-  DistortionScoreProducer* GetDistortionScoreProducer() const {
-    assert(m_distortionScoreProducers.size() >= 1);
-    return m_distortionScoreProducers[0];
+
+  const UnknownWordPenaltyProducer *GetUnknownWordPenaltyProducer() const {
+    return m_unknownWordPenaltyProducer;
   }
-  MetaFeatureProducer* GetMetaFeatureProducer() const {
-    return m_metaFeatureProducer;
-  }
-  std::vector<LexicalReordering*> GetLexicalReorderModels() const {
-    return m_reorderModels;
-  } 
-  std::vector<PhraseDictionaryFeature*> GetPhraseDictionaryModels() const {
-    return m_phraseDictionary;
-  }
-  size_t GetNumInputScores() const {
-    return m_numInputScores;
+
+  const InputFeature *GetInputFeature() const {
+    return m_inputFeature;
   }
 
   const ScoreComponentCollection& GetAllWeights() const {
@@ -525,37 +453,31 @@ public:
   }
 
   //Weight for a single-valued feature
-  float GetWeight(const ScoreProducer* sp) const {
+  float GetWeight(const FeatureFunction* sp) const {
     return m_allWeights.GetScoreForProducer(sp);
   }
 
   //Weight for a single-valued feature
-  void SetWeight(const ScoreProducer* sp, float weight) ;
+  void SetWeight(const FeatureFunction* sp, float weight) ;
 
 
   //Weights for feature with fixed number of values
-  std::vector<float> GetWeights(const ScoreProducer* sp) const {
+  std::vector<float> GetWeights(const FeatureFunction* sp) const {
     return m_allWeights.GetScoresForProducer(sp);
   }
 
   float GetSparseWeight(const FName& featureName) const {
     return m_allWeights.GetSparseWeight(featureName);
   }
-  
+
   //Weights for feature with fixed number of values
-  void SetWeights(const ScoreProducer* sp, const std::vector<float>& weights);
+  void SetWeights(const FeatureFunction* sp, const std::vector<float>& weights);
 
   bool GetDistinctNBest() const {
     return m_onlyDistinctNBest;
   }
   const std::string& GetFactorDelimiter() const {
     return m_factorDelimiter;
-  }
-  size_t GetMaxNumFactors(FactorDirection direction) const {
-    return m_maxFactorIdx[(size_t)direction]+1;
-  }
-  size_t GetMaxNumFactors() const {
-    return m_maxNumFactors;
   }
   bool UseMBR() const {
     return m_mbr;
@@ -630,6 +552,12 @@ public:
   }
   bool GetOutputSearchGraphExtended() const {
     return m_outputSearchGraphExtended;
+  }
+  bool GetOutputSearchGraphSLF() const {
+    return m_outputSearchGraphSLF;
+  }
+  bool GetOutputSearchGraphHypergraph() const {
+    return m_outputSearchGraphHypergraph;
   }
 #ifdef HAVE_PROTOBUF
   bool GetOutputSearchGraphPB() const {
@@ -710,17 +638,22 @@ public:
   int ThreadCount() const {
     return m_threadCount;
   }
-  
-  long GetStartTranslationId() const
-  { return m_startTranslationId; }
-  
+
+  long GetStartTranslationId() const {
+    return m_startTranslationId;
+  }
+
   void SetExecPath(const std::string &path);
   const std::string &GetBinDirectory() const;
 
   bool NeedAlignmentInfo() const {
-    return m_needAlignmentInfo; }
+    return m_needAlignmentInfo;
+  }
   const std::string &GetAlignmentOutputFile() const {
     return m_alignmentOutputFile;
+  }
+  bool PrintAlignmentInfo() const {
+    return m_PrintAlignmentInfo;
   }
   bool PrintAlignmentInfoInNbest() const {
     return m_PrintAlignmentInfoNbest;
@@ -733,6 +666,116 @@ public:
     return m_nBestIncludesSegmentation;
   }
 
+  bool GetHasAlternateWeightSettings() const {
+    return m_weightSetting.size() > 0;
+  }
+
+  /** Alternate weight settings allow the wholesale ignoring of
+      feature functions. This function checks if a feature function
+      should be evaluated given the current weight setting */
+  bool IsFeatureFunctionIgnored( const FeatureFunction &ff ) const {
+    if (!GetHasAlternateWeightSettings()) {
+      return false;
+    }
+    std::map< std::string, std::set< std::string > >::const_iterator lookupIgnoreFF
+    =  m_weightSettingIgnoreFF.find( m_currentWeightSetting );
+    if (lookupIgnoreFF == m_weightSettingIgnoreFF.end()) {
+      return false;
+    }
+    const std::string &ffName = ff.GetScoreProducerDescription();
+    const std::set< std::string > &ignoreFF = lookupIgnoreFF->second;
+    return ignoreFF.count( ffName );
+  }
+
+  /** Alternate weight settings allow the wholesale ignoring of
+      decoding graphs (typically a translation table). This function
+      checks if a feature function should be evaluated given the
+      current weight setting */
+  bool IsDecodingGraphIgnored( const size_t id ) const {
+    if (!GetHasAlternateWeightSettings()) {
+      return false;
+    }
+    std::map< std::string, std::set< size_t > >::const_iterator lookupIgnoreDP
+    =  m_weightSettingIgnoreDP.find( m_currentWeightSetting );
+    if (lookupIgnoreDP == m_weightSettingIgnoreDP.end()) {
+      return false;
+    }
+    const std::set< size_t > &ignoreDP = lookupIgnoreDP->second;
+    return ignoreDP.count( id );
+  }
+
+  /** process alternate weight settings
+    * (specified with [alternate-weight-setting] in config file) */
+  void SetWeightSetting(const std::string &settingName) const {
+
+    // if no change in weight setting, do nothing
+    if (m_currentWeightSetting == settingName) {
+      return;
+    }
+
+    // model must support alternate weight settings
+    if (!GetHasAlternateWeightSettings()) {
+      UserMessage::Add("Warning: Input specifies weight setting, but model does not support alternate weight settings.");
+      return;
+    }
+
+    // find the setting
+    m_currentWeightSetting = settingName;
+    std::map< std::string, ScoreComponentCollection* >::const_iterator i =
+      m_weightSetting.find( settingName );
+
+    // if not found, resort to default
+    if (i == m_weightSetting.end()) {
+      std::stringstream strme;
+      strme << "Warning: Specified weight setting " << settingName
+            << " does not exist in model, using default weight setting instead";
+      UserMessage::Add(strme.str());
+      i = m_weightSetting.find( "default" );
+      m_currentWeightSetting = "default";
+    }
+
+    // set weights
+    m_allWeights = *(i->second);
+  }
+
+  float GetWeightWordPenalty() const;
+  float GetWeightUnknownWordPenalty() const;
+
+  const std::vector<PhraseDictionary*>& GetPhraseDictionaries() const {
+    return m_phraseDictionary;
+  }
+  const std::vector<const GenerationDictionary*>& GetGenerationDictionaries() const {
+    return m_generationDictionary;
+  }
+  const PhraseDictionary*GetTranslationScoreProducer(size_t index) const {
+    return GetPhraseDictionaries().at(index);
+  }
+  std::vector<float> GetTranslationWeights(size_t index) const {
+    std::vector<float> weights = GetWeights(GetTranslationScoreProducer(index));
+    return weights;
+  }
+
+  const std::vector<DecodeGraph*>& GetDecodeGraphs() const {
+    return m_decodeGraphs;
+  }
+  const std::vector<size_t>& GetDecodeGraphBackoff() const {
+    return m_decodeGraphBackoff;
+  }
+
+  //sentence (and thread) specific initialisationn and cleanup
+  void InitializeForInput(const InputType& source) const;
+  void CleanUpAfterSentenceProcessing(const InputType& source) const;
+
+  void LoadFeatureFunctions();
+  bool CheckWeights() const;
+  bool LoadWeightSettings();
+  bool LoadAlternateWeightSettings();
+
+  void OverrideFeatures();
+
+  FactorType GetPlaceholderFactor() const {
+    return m_placeHolderFactor;
+  }
 };
 
 }

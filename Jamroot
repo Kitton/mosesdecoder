@@ -78,6 +78,8 @@ external-lib z ;
 if ! [ option.get "without-tcmalloc" : : "yes" ] && [ test_library "tcmalloc_minimal" ] {
   external-lib tcmalloc_minimal ;
   requirements += <threading>multi:<library>tcmalloc_minimal ;
+} else {
+  echo "Tip: install tcmalloc for faster threading.  See BUILD-INSTRUCTIONS.txt for more information." ;
 }
 
 if [ option.get "enable-mpi" : : "yes" ] {
@@ -106,16 +108,21 @@ project : default-build
   <link>static
   ;
 
+#Apparently OS X likes to link against iconv for fgetsUTF8.
+lib iconv ;
+requirements += <os>MACOSX:<library>iconv ;
+
 project : requirements 
   <threading>multi:<define>WITH_THREADS
   <threading>multi:<library>boost_thread
+  <library>boost_system
   <define>_FILE_OFFSET_BITS=64 <define>_LARGE_FILES
   $(requirements)
   <include>.
   ;
 
 #Add directories here if you want their incidental targets too (i.e. tests).
-build-projects lm util phrase-extract search moses mert moses-cmd moses-chart-cmd mira scripts regression-testing  ;
+build-projects lm util phrase-extract search moses moses/LM mert moses-cmd moses-chart-cmd mira scripts regression-testing  ;
 
 alias programs : lm//programs moses-chart-cmd//moses_chart moses-cmd//programs OnDiskPt//CreateOnDiskPt OnDiskPt//queryOnDiskPt mert//programs misc//programs symal phrase-extract phrase-extract//lexical-reordering phrase-extract//extract-ghkm phrase-extract//pcfg-extract phrase-extract//pcfg-score biconcor mira//mira contrib/server//mosesserver  ;
 

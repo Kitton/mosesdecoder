@@ -37,10 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace Moses
 {
 
-class LMList;
-class ScoreProducer;
-class TranslationSystem;
-class WordPenaltyProducer;
+class FeatureFunction;
 
 /** represents an entry on the target side of a phrase table (scores, translation, alignment)
  */
@@ -48,64 +45,31 @@ class TargetPhrase: public Phrase
 {
   friend std::ostream& operator<<(std::ostream&, const TargetPhrase&);
 protected:
-  float m_fullScore;
+  float m_fullScore, m_futureScore;
   ScoreComponentCollection m_scoreBreakdown;
 
-	// in case of confusion net, ptr to source phrase
-	Phrase m_sourcePhrase; 
-	const AlignmentInfo* m_alignTerm, *m_alignNonTerm;
-	Word m_lhsTarget;
+  // in case of confusion net, ptr to source phrase
+  Phrase m_sourcePhrase;
+  const AlignmentInfo* m_alignTerm, *m_alignNonTerm;
+  const Word *m_lhsTarget;
 
 public:
   TargetPhrase();
+  TargetPhrase(const TargetPhrase &copy);
   explicit TargetPhrase(std::string out_string);
   explicit TargetPhrase(const Phrase &targetPhrase);
+  ~TargetPhrase();
 
-  //! used by the unknown word handler- these targets
-  //! don't have a translation score, so wp is the only thing used
-  void SetScore(const TranslationSystem* system);
+  void Evaluate(const Phrase &source);
+  void Evaluate(const Phrase &source, const std::vector<FeatureFunction*> &ffs);
 
-  //!Set score for Sentence XML target options
-  void SetScore(float score);
+  void Evaluate(const InputType &input);
 
-  //! Set score for unknown words with input weights
-  void SetScore(const TranslationSystem* system, const Scores &scoreVector);
+  void SetSparseScore(const FeatureFunction* translationScoreProducer, const StringPiece &sparseString);
 
-
-  /*** Called immediately after creation to initialize scores.
-   *
-   * @param translationScoreProducer The PhraseDictionaryMemory that this TargetPhrase is contained by.
-   *        Used to identify where the scores for this phrase belong in the list of all scores.
-   * @param scoreVector the vector of scores (log probs) associated with this translation
-   * @param weighT the weights for the individual scores (t-weights in the .ini file)
-   * @param languageModels all the LanguageModels that should be used to compute the LM scores
-   * @param weightWP the weight of the word penalty
-   *
-   * @TODO should this be part of the constructor?  If not, add explanation why not.
-  	*/
-  void SetScore(const ScoreProducer* translationScoreProducer,
-                const Scores &scoreVector,
-                const ScoreComponentCollection &sparseScoreVector,
-                const std::vector<float> &weightT,
-                float weightWP,
-                const LMList &languageModels);
-
-  void SetScoreChart(const ScoreProducer* translationScoreProducer
-                     ,const Scores &scoreVector
-                     ,const std::vector<float> &weightT
-                     ,const LMList &languageModels
-                     ,const WordPenaltyProducer* wpProducer);
-
-  // used by for unknown word proc in chart decoding
-  void SetScore(const ScoreProducer* producer, const Scores &scoreVector);
-
-
-  // used when creating translations of unknown words:
-  void ResetScore();
-  void SetWeights(const ScoreProducer*, const std::vector<float> &weightT);
-
-  TargetPhrase *MergeNext(const TargetPhrase &targetPhrase) const;
-  // used for translation step
+  // used to set translation or gen score
+  void SetXMLScore(float score);
+  void SetInputScore(const Scores &scoreVector);
 
 #ifdef HAVE_PROTOBUF
   void WriteToRulePB(hgmert::Rule* pb) const;
@@ -120,35 +84,27 @@ public:
   inline float GetFutureScore() const {
     return m_fullScore;
   }
-  inline void SetFutureScore(float fullScore) {
-    m_fullScore = fullScore;
+
+  inline const ScoreComponentCollection &GetScoreBreakdown() const {
+    return m_scoreBreakdown;
   }
-	inline const ScoreComponentCollection &GetScoreBreakdown() const
-	{
-		return m_scoreBreakdown;
-	}
+  inline ScoreComponentCollection &GetScoreBreakdown() {
+    return m_scoreBreakdown;
+  }
 
   //TODO: Probably shouldn't copy this, but otherwise ownership is unclear
-	void SetSourcePhrase(const Phrase&  p) 
-	{
-		m_sourcePhrase=p;
-	}
-  // ... but if we must store a copy, at least initialize it in-place
-  Phrase &MutableSourcePhrase() {
+  void SetSourcePhrase(const Phrase&  p) {
+    m_sourcePhrase=p;
+  }
+  const Phrase& GetSourcePhrase() const {
     return m_sourcePhrase;
   }
-	const Phrase& GetSourcePhrase() const 
-	{
-		return m_sourcePhrase;
-	}
-	
-	void SetTargetLHS(const Word &lhs)
-	{ 	m_lhsTarget = lhs; }
-	const Word &GetTargetLHS() const
-	{ return m_lhsTarget; }
-	
-  Word &MutableTargetLHS() {
-    return m_lhsTarget;
+
+  void SetTargetLHS(const Word *lhs) {
+    m_lhsTarget = lhs;
+  }
+  const Word &GetTargetLHS() const {
+    return *m_lhsTarget;
   }
 
   void SetAlignmentInfo(const StringPiece &alignString);
@@ -162,11 +118,14 @@ public:
   void SetAlignTerm(const AlignmentInfo::CollType &coll);
   void SetAlignNonTerm(const AlignmentInfo::CollType &coll);
 
-  const AlignmentInfo &GetAlignTerm() const
-	{ return *m_alignTerm; }
-  const AlignmentInfo &GetAlignNonTerm() const
-	{ return *m_alignNonTerm; }
-	
+  const AlignmentInfo &GetAlignTerm() const {
+    return *m_alignTerm;
+  }
+  const AlignmentInfo &GetAlignNonTerm() const {
+    return *m_alignNonTerm;
+  }
+
+  void Merge(const TargetPhrase &copy, const std::vector<FactorType>& factorVec);
 
   TO_STRING();
 };
@@ -176,10 +135,8 @@ std::ostream& operator<<(std::ostream&, const TargetPhrase&);
 /**
  * Hasher that looks at source and target phrase.
  **/
-struct TargetPhraseHasher 
-{
-  inline size_t operator()(const TargetPhrase& targetPhrase) const
-  {
+struct TargetPhraseHasher {
+  inline size_t operator()(const TargetPhrase& targetPhrase) const {
     size_t seed = 0;
     boost::hash_combine(seed, targetPhrase);
     boost::hash_combine(seed, targetPhrase.GetSourcePhrase());
@@ -190,14 +147,12 @@ struct TargetPhraseHasher
   }
 };
 
-struct TargetPhraseComparator
-{
-  inline bool operator()(const TargetPhrase& lhs, const TargetPhrase& rhs) const
-  {
+struct TargetPhraseComparator {
+  inline bool operator()(const TargetPhrase& lhs, const TargetPhrase& rhs) const {
     return lhs.Compare(rhs) == 0 &&
-      lhs.GetSourcePhrase().Compare(rhs.GetSourcePhrase()) == 0 &&
-      lhs.GetAlignTerm() == rhs.GetAlignTerm() &&
-      lhs.GetAlignNonTerm() == rhs.GetAlignNonTerm();
+           lhs.GetSourcePhrase().Compare(rhs.GetSourcePhrase()) == 0 &&
+           lhs.GetAlignTerm() == rhs.GetAlignTerm() &&
+           lhs.GetAlignNonTerm() == rhs.GetAlignNonTerm();
   }
 
 };

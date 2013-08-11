@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define moses_TargetPhraseCollection_h
 
 #include <vector>
+#include <iostream>
 #include "TargetPhrase.h"
 #include "Util.h"
 
@@ -33,6 +34,9 @@ namespace Moses
 class TargetPhraseCollection
 {
 protected:
+  friend std::ostream& operator<<(std::ostream &, const TargetPhraseCollection &);
+
+  // TODO boost::ptr_vector
   std::vector<TargetPhrase*> m_collection;
 
 public:
@@ -54,10 +58,12 @@ public:
   }
 
   ~TargetPhraseCollection() {
-    RemoveAllInColl(m_collection);
+    Clear();
   }
 
-  const std::vector<TargetPhrase*> &GetCollection() const { return m_collection; }
+  const std::vector<TargetPhrase*> &GetCollection() const {
+    return m_collection;
+  }
 
   //! divide collection into 2 buckets using std::nth_element, the top & bottom according to table limit
   void NthElement(size_t tableLimit);
@@ -77,6 +83,10 @@ public:
 
   void Prune(bool adhereTableLimit, size_t tableLimit);
   void Sort(bool adhereTableLimit, size_t tableLimit);
+
+  void Clear() {
+    RemoveAllInColl(m_collection);
+  }
 
 };
 

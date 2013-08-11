@@ -1,5 +1,5 @@
 /**
- * Extract features and score statistics from nbest file, optionally merging with
+ * Extract features and score statistics from nvest file, optionally merging with
  * those from the previous iteration.
  * Developed during the 2nd MT marathon.
  **/
@@ -22,7 +22,8 @@
 using namespace std;
 using namespace MosesTuning;
 
-namespace {
+namespace
+{
 
 void usage()
 {
@@ -80,69 +81,69 @@ struct ProgramOption {
   int verbosity;
 
   ProgramOption()
-//      : scorerType("ASIYA"),
-        : scorerType("BLEU"),
-        scorerConfig(""),
-        scorerFactors(""),
-        scorerFilter(""),
-        referenceFile(""),
-        nbestFile(""),
-        scoreDataFile("statscore.data"),
-        featureDataFile("features.data"),
-        prevScoreDataFile(""),
-        prevFeatureDataFile(""),
-        binmode(false),
-        allowDuplicates(false),
-        verbosity(0) { }
+    : scorerType("BLEU"),
+      scorerConfig(""),
+      scorerFactors(""),
+      scorerFilter(""),
+      referenceFile(""),
+      nbestFile(""),
+      scoreDataFile("statscore.data"),
+      featureDataFile("features.data"),
+      prevScoreDataFile(""),
+      prevFeatureDataFile(""),
+      binmode(false),
+      allowDuplicates(false),
+      verbosity(0) { }
 };
 
-void ParseCommandOptions(int argc, char** argv, ProgramOption* opt) {
+void ParseCommandOptions(int argc, char** argv, ProgramOption* opt)
+{
   int c;
   int option_index;
 
   while ((c = getopt_long(argc, argv, "s:r:f:l:n:S:F:R:E:v:hbd", long_options, &option_index)) != -1) {
     switch (c) {
-      case 's':
-        opt->scorerType = string(optarg);
-        break;
-      case 'c':
-        opt->scorerConfig = string(optarg); // ADD THE SOURCE FILE
-        break;
-      case 'f':
-        opt->scorerFactors = string(optarg);
-        break;
-      case 'l':
-        opt->scorerFilter = string(optarg);
-        break;
-      case 'r':
-        opt->referenceFile = string(optarg);
-        break;
-      case 'b':
-        opt->binmode = true;
-        break;
-      case 'n':
-        opt->nbestFile = string(optarg);
-        break;
-      case 'S':
-        opt->scoreDataFile = string(optarg);
-        break;
-      case 'F':
-        opt->featureDataFile = string(optarg);
-        break;
-      case 'E':
-        opt->prevFeatureDataFile = string(optarg);
-        break;
-      case 'R':
-        opt->prevScoreDataFile = string(optarg);
-        break;
-      case 'v':
-        opt->verbosity = atoi(optarg);
-        break;
-      case 'd':
-        opt->allowDuplicates = true;
-        break;
-      default:
-        usage();
+    case 's':
+      opt->scorerType = string(optarg);
+      break;
+    case 'c':
+      opt->scorerConfig = string(optarg);
+      break;
+    case 'f':
+      opt->scorerFactors = string(optarg);
+      break;
+    case 'l':
+      opt->scorerFilter = string(optarg);
+      break;
+    case 'r':
+      opt->referenceFile = string(optarg);
+      break;
+    case 'b':
+      opt->binmode = true;
+      break;
+    case 'n':
+      opt->nbestFile = string(optarg);
+      break;
+    case 'S':
+      opt->scoreDataFile = string(optarg);
+      break;
+    case 'F':
+      opt->featureDataFile = string(optarg);
+      break;
+    case 'E':
+      opt->prevFeatureDataFile = string(optarg);
+      break;
+    case 'R':
+      opt->prevScoreDataFile = string(optarg);
+      break;
+    case 'v':
+      opt->verbosity = atoi(optarg);
+      break;
+    case 'd':
+      opt->allowDuplicates = true;
+      break;
+    default:
+      usage();
     }
   }
 }
@@ -151,7 +152,6 @@ void ParseCommandOptions(int argc, char** argv, ProgramOption* opt) {
 
 int main(int argc, char** argv)
 {
-
   ResetUserTime();
 
   ProgramOption option;
@@ -177,18 +177,22 @@ int main(int argc, char** argv)
     if (option.nbestFile.length() > 0) {
       Tokenize(option.nbestFile.c_str(), ',', &nbestFiles);
     }
+
     vector<string> referenceFiles;
     if (option.referenceFile.length() > 0) {
       Tokenize(option.referenceFile.c_str(), ',', &referenceFiles);
     }
+
     vector<string> prevScoreDataFiles;
     if (option.prevScoreDataFile.length() > 0) {
       Tokenize(option.prevScoreDataFile.c_str(), ',', &prevScoreDataFiles);
     }
+
     vector<string> prevFeatureDataFiles;
     if (option.prevFeatureDataFile.length() > 0) {
       Tokenize(option.prevFeatureDataFile.c_str(), ',', &prevFeatureDataFiles);
     }
+
     if (prevScoreDataFiles.size() != prevFeatureDataFiles.size()) {
       throw runtime_error("Error: there is a different number of previous score and feature files");
     }
@@ -200,17 +204,19 @@ int main(int argc, char** argv)
     }
 
     TRACE_ERR("Scorer type: " << option.scorerType << endl);
+
     boost::scoped_ptr<Scorer> scorer(
-    ScorerFactory::getScorer(option.scorerType, option.scorerConfig));
+      ScorerFactory::getScorer(option.scorerType, option.scorerConfig));
+
     // set Factors and Filter used to preprocess the sentences
     scorer->setFactors(option.scorerFactors);
     scorer->setFilter(option.scorerFilter);
-cout << "exractor set reference files." << endl;
+
     // load references
     if (referenceFiles.size() > 0)
       scorer->setReferenceFiles(referenceFiles);
 
-    PrintUserTime("References loaded");
+// PrintUserTime("References loaded");
     boost::scoped_ptr<Data> data (
         DataFactory::getData(option.scorerType, scorer.get()) );
     // load old data
@@ -218,20 +224,21 @@ cout << "exractor set reference files." << endl;
       data->load(prevFeatureDataFiles.at(i), prevScoreDataFiles.at(i));
     }
 
-    PrintUserTime("Previous data loaded");
+//    PrintUserTime("Previous data loaded");
+
     // computing score statistics of each nbest file
     for (size_t i = 0; i < nbestFiles.size(); i++) {
         data->loadNBest(nbestFiles.at(i));
     }
 
-    PrintUserTime("Nbest entries loaded and scored");
+//    PrintUserTime("Nbest entries loaded and scored");
+
     //ADDED_BY_TS
 //    if (!option.allowDuplicates) {
 //      data->removeDuplicates();
 //    }
     //END_ADDED
 
-    cout << "exractor save. feature data file: " << option.featureDataFile << ", score data file: " << option.scoreDataFile << endl;
     data->save(option.featureDataFile, option.scoreDataFile, option.binmode);
     PrintUserTime("Stopping...");
 

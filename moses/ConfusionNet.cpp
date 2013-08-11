@@ -5,11 +5,12 @@
 
 #include "FactorCollection.h"
 #include "Util.h"
-#include "PhraseDictionaryTreeAdaptor.h"
+#include "moses/TranslationModel/PhraseDictionaryTreeAdaptor.h"
 #include "TranslationOptionCollectionConfusionNet.h"
 #include "StaticData.h"
 #include "Sentence.h"
 #include "UserMessage.h"
+#include "moses/FF/InputFeature.h"
 
 namespace Moses
 {
@@ -118,11 +119,16 @@ bool ConfusionNet::ReadFormat0(std::istream& in,
                                const std::vector<FactorType>& factorOrder)
 {
   Clear();
-  std::string line;
-  size_t numLinkParams = StaticData::Instance().GetNumLinkParams();
-  size_t numLinkWeights = StaticData::Instance().GetNumInputScores();
-  bool addRealWordCount = ((numLinkParams + 1) == numLinkWeights);
 
+  const StaticData &staticData = StaticData::Instance();
+  const InputFeature *inputFeature = staticData.GetInputFeature();
+  size_t numInputScores = inputFeature->GetNumInputScores();
+  size_t numRealWordCount = inputFeature->GetNumRealWordsInInput();
+
+  size_t totalCount = numInputScores + numRealWordCount;
+  bool addRealWordCount = (numRealWordCount > 0);
+
+  std::string line;
   while(getline(in,line)) {
     std::istringstream is(line);
     std::string word;
@@ -131,8 +137,8 @@ bool ConfusionNet::ReadFormat0(std::istream& in,
     while(is>>word) {
       Word w;
       String2Word(word,w,factorOrder);
-      std::vector<float> probs(numLinkWeights,0.0);
-      for(size_t i=0; i<numLinkParams; i++) {
+      std::vector<float> probs(totalCount, 0.0);
+      for(size_t i=0; i < numInputScores; i++) {
         double prob;
         if (!(is>>prob)) {
           TRACE_ERR("ERROR: unable to parse CN input - bad link probability, or wrong number of scores\n");
@@ -150,7 +156,7 @@ bool ConfusionNet::ReadFormat0(std::istream& in,
       }
       //store 'real' word count in last feature if we have one more weight than we do arc scores and not epsilon
       if (addRealWordCount && word!=EPSILON && word!="")
-        probs[numLinkParams] = -1.0;
+        probs.back() = -1.0;
       col.push_back(std::make_pair(w,probs));
     }
     if(col.size()) {
@@ -242,11 +248,11 @@ std::ostream& operator<<(std::ostream& out,const ConfusionNet& cn)
 }
 
 TranslationOptionCollection*
-ConfusionNet::CreateTranslationOptionCollection(const TranslationSystem* system) const
+ConfusionNet::CreateTranslationOptionCollection() const
 {
   size_t maxNoTransOptPerCoverage = StaticData::Instance().GetMaxNoTransOptPerCoverage();
   float translationOptionThreshold = StaticData::Instance().GetTranslationOptionThreshold();
-  TranslationOptionCollection *rv= new TranslationOptionCollectionConfusionNet(system, *this, maxNoTransOptPerCoverage, translationOptionThreshold);
+  TranslationOptionCollection *rv= new TranslationOptionCollectionConfusionNet(*this, maxNoTransOptPerCoverage, translationOptionThreshold);
   CHECK(rv);
   return rv;
 }

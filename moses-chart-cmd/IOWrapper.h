@@ -40,7 +40,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "moses/TypeDef.h"
 #include "moses/Sentence.h"
 #include "moses/FactorTypeSet.h"
-#include "moses/TranslationSystem.h"
 #include "moses/ChartTrellisPathList.h"
 #include "moses/OutputCollector.h"
 #include "moses/ChartHypothesis.h"
@@ -51,6 +50,7 @@ namespace Moses
 {
 class FactorCollection;
 class ChartTrellisPathList;
+class ScoreComponentCollection;
 }
 
 namespace MosesChartCmd
@@ -61,6 +61,7 @@ namespace MosesChartCmd
 class IOWrapper
 {
 protected:
+  typedef std::vector<std::pair<Moses::Word, Moses::WordsRange> > ApplicationContext;
 
   long m_translationId;
 
@@ -82,6 +83,19 @@ protected:
   size_t OutputAlignmentNBest(Alignments &retAlign, const Moses::ChartTrellisNode &node, size_t startTarget);
   size_t OutputAlignment(Alignments &retAlign, const Moses::ChartHypothesis *hypo, size_t startTarget);
   void OutputAlignment(std::vector< std::set<size_t> > &retAlignmentsS2T, const Moses::AlignmentInfo &ai);
+  void OutputTranslationOptions(std::ostream &out, ApplicationContext &applicationContext, const Moses::ChartHypothesis *hypo, const Moses::Sentence &sentence, long translationId);
+  void ReconstructApplicationContext(const Moses::ChartHypothesis &hypo,
+                                     const Moses::Sentence &sentence,
+                                     ApplicationContext &context);
+  void WriteApplicationContext(std::ostream &out,
+                               const ApplicationContext &context);
+
+  void OutputAllFeatureScores(const Moses::ScoreComponentCollection &features
+                              , std::ostream &out);
+  void OutputFeatureScores( std::ostream& out
+                            , const Moses::ScoreComponentCollection &features
+                            , const Moses::FeatureFunction *ff
+                            , std::string &lastName );
 
 public:
   IOWrapper(const std::vector<Moses::FactorType>	&inputFactorOrder
@@ -97,8 +111,8 @@ public:
   void OutputBestHypo(search::Applied applied, long translationId);
   void OutputBestHypo(const std::vector<const Moses::Factor*>&  mbrBestHypo, long translationId);
   void OutputBestNone(long translationId);
-  void OutputNBestList(const Moses::ChartTrellisPathList &nBestList, const Moses::TranslationSystem* system, long translationId);
-  void OutputNBestList(const std::vector<search::Applied> &nbest, const Moses::TranslationSystem &system, long translationId);
+  void OutputNBestList(const Moses::ChartTrellisPathList &nBestList, long translationId);
+  void OutputNBestList(const std::vector<search::Applied> &nbest, long translationId);
   void OutputDetailedTranslationReport(const Moses::ChartHypothesis *hypo, const Moses::Sentence &sentence, long translationId);
   void Backtrack(const Moses::ChartHypothesis *hypo);
 

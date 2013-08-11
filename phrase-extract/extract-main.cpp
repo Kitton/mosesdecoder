@@ -29,7 +29,8 @@
 using namespace std;
 using namespace MosesTraining;
 
-namespace MosesTraining {
+namespace MosesTraining
+{
 
 
 const long int LINE_MAX_LENGTH = 500000 ;
@@ -49,37 +50,38 @@ typedef vector < HPhrase > HPhraseVector;
 // The key of the map is the English index and the value is a set of the source ones
 typedef map <int, set<int> > HSentenceVertices;
 
-  REO_POS getOrientWordModel(SentenceAlignment &, REO_MODEL_TYPE, bool, bool,
+REO_POS getOrientWordModel(SentenceAlignment &, REO_MODEL_TYPE, bool, bool,
                            int, int, int, int, int, int, int,
                            bool (*)(int, int), bool (*)(int, int));
-  REO_POS getOrientPhraseModel(SentenceAlignment &, REO_MODEL_TYPE, bool, bool,
+REO_POS getOrientPhraseModel(SentenceAlignment &, REO_MODEL_TYPE, bool, bool,
                              int, int, int, int, int, int, int,
                              bool (*)(int, int), bool (*)(int, int),
                              const HSentenceVertices &, const HSentenceVertices &);
-  REO_POS getOrientHierModel(SentenceAlignment &, REO_MODEL_TYPE, bool, bool,
+REO_POS getOrientHierModel(SentenceAlignment &, REO_MODEL_TYPE, bool, bool,
                            int, int, int, int, int, int, int,
                            bool (*)(int, int), bool (*)(int, int),
                            const HSentenceVertices &, const HSentenceVertices &,
                            const HSentenceVertices &, const HSentenceVertices &,
                            REO_POS);
 
-  void insertVertex(HSentenceVertices &, int, int);
-  void insertPhraseVertices(HSentenceVertices &, HSentenceVertices &, HSentenceVertices &, HSentenceVertices &,
+void insertVertex(HSentenceVertices &, int, int);
+void insertPhraseVertices(HSentenceVertices &, HSentenceVertices &, HSentenceVertices &, HSentenceVertices &,
                           int, int, int, int);
-  string getOrientString(REO_POS, REO_MODEL_TYPE);
+string getOrientString(REO_POS, REO_MODEL_TYPE);
 
-  bool ge(int, int);
-  bool le(int, int);
-  bool lt(int, int);
+bool ge(int, int);
+bool le(int, int);
+bool lt(int, int);
 
-  bool isAligned (SentenceAlignment &, int, int);
-  int sentenceOffset = 0;
+bool isAligned (SentenceAlignment &, int, int);
+int sentenceOffset = 0;
 
 }
 
-namespace MosesTraining{
+namespace MosesTraining
+{
 
-class ExtractTask 
+class ExtractTask
 {
 public:
   ExtractTask(size_t id, SentenceAlignment &sentence,PhraseExtractionOptions &initoptions, Moses::OutputFileStream &extractFile, Moses::OutputFileStream &extractFileInv,Moses::OutputFileStream &extractFileOrientation):
@@ -87,8 +89,8 @@ public:
     m_options(initoptions),
     m_extractFile(extractFile),
     m_extractFileInv(extractFileInv),
-    m_extractFileOrientation(extractFileOrientation){}
-void Run();
+    m_extractFileOrientation(extractFileOrientation) {}
+  void Run();
 private:
   vector< string > m_extractedPhrases;
   vector< string > m_extractedPhrasesInv;
@@ -98,7 +100,7 @@ private:
   void extract(SentenceAlignment &);
   void addPhrase(SentenceAlignment &, int, int, int, int, string &);
   void writePhrasesToFile();
-  
+
   SentenceAlignment &m_sentence;
   const PhraseExtractionOptions &m_options;
   Moses::OutputFileStream &m_extractFile;
@@ -112,9 +114,9 @@ int main(int argc, char* argv[])
   cerr	<< "PhraseExtract v1.4, written by Philipp Koehn\n"
         << "phrase extraction from an aligned parallel corpus\n";
 
- if (argc < 6) {
+  if (argc < 6) {
     cerr << "syntax: extract en de align extract max-length [orientation [ --model [wbe|phrase|hier]-[msd|mslr|mono] ] ";
-    cerr<<"| --OnlyOutputSpanInfo | --NoTTable | --GZOutput | --IncludeSentenceId | --SentenceOffset n ]\n";
+    cerr<<"| --OnlyOutputSpanInfo | --NoTTable | --GZOutput | --IncludeSentenceId | --SentenceOffset n | --InstanceWeights filename ]\n";
     exit(1);
   }
 
@@ -135,7 +137,7 @@ int main(int argc, char* argv[])
     } else if (strcmp(argv[i],"--NoTTable") == 0) {
       options.initTranslationFlag(false);
     } else if (strcmp(argv[i], "--IncludeSentenceId") == 0) {
-      options.initIncludeSentenceIdFlag(true);  
+      options.initIncludeSentenceIdFlag(true);
     } else if (strcmp(argv[i], "--SentenceOffset") == 0) {
       if (i+1 >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         cerr << "extract: syntax error, used switch --SentenceOffset without a number" << endl;
@@ -143,7 +145,13 @@ int main(int argc, char* argv[])
       }
       sentenceOffset = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--GZOutput") == 0) {
-      options.initGzOutput(true);  
+      options.initGzOutput(true);
+    } else if (strcmp(argv[i], "--InstanceWeights") == 0) {
+      if (i+1 >= argc) {
+        cerr << "extract: syntax error, used switch --InstanceWeights without file name" << endl;
+        exit(1);
+      }
+      options.initInstanceWeightsFile(argv[++i]);
     } else if(strcmp(argv[i],"--model") == 0) {
       if (i+1 >= argc) {
         cerr << "extract: syntax error, no model's information provided to the option --model " << endl;
@@ -220,6 +228,13 @@ int main(int argc, char* argv[])
   istream *fFileP = &fFile;
   istream *aFileP = &aFile;
 
+  istream *iwFileP = NULL;
+  auto_ptr<Moses::InputFileStream> instanceWeightsFile;
+  if (options.getInstanceWeightsFile().length()) {
+    instanceWeightsFile.reset(new Moses::InputFileStream(options.getInstanceWeightsFile()));
+    iwFileP = instanceWeightsFile.get();
+  }
+
   // open output files
   if (options.isTranslationFlag()) {
     string fileNameExtractInv = fileNameExtract + ".inv" + (options.isGzOutput()?".gz":"");
@@ -238,12 +253,16 @@ int main(int argc, char* argv[])
     char englishString[LINE_MAX_LENGTH];
     char foreignString[LINE_MAX_LENGTH];
     char alignmentString[LINE_MAX_LENGTH];
+    char weightString[LINE_MAX_LENGTH];
     SAFE_GETLINE((*eFileP), englishString, LINE_MAX_LENGTH, '\n', __FILE__);
     if (eFileP->eof()) break;
     SAFE_GETLINE((*fFileP), foreignString, LINE_MAX_LENGTH, '\n', __FILE__);
     SAFE_GETLINE((*aFileP), alignmentString, LINE_MAX_LENGTH, '\n', __FILE__);
+    if (iwFileP) {
+      SAFE_GETLINE((*iwFileP), weightString, LINE_MAX_LENGTH, '\n', __FILE__);
+    }
     SentenceAlignment sentence;
-	// cout << "read in: " << englishString << " & " << foreignString << " & " << alignmentString << endl;
+    // cout << "read in: " << englishString << " & " << foreignString << " & " << alignmentString << endl;
     //az: output src, tgt, and alingment line
     if (options.isOnlyOutputSpanInfo()) {
       cout << "LOG: SRC: " << foreignString << endl;
@@ -251,8 +270,8 @@ int main(int argc, char* argv[])
       cout << "LOG: ALT: " << alignmentString << endl;
       cout << "LOG: PHRASES_BEGIN:" << endl;
     }
-	if (sentence.create( englishString, foreignString, alignmentString, i, false)) {
-   	ExtractTask *task = new ExtractTask(i-1, sentence, options, extractFile , extractFileInv, extractFileOrientation);
+    if (sentence.create( englishString, foreignString, alignmentString, weightString, i, false)) {
+      ExtractTask *task = new ExtractTask(i-1, sentence, options, extractFile , extractFileInv, extractFileOrientation);
       task->Run();
       delete task;
 
@@ -269,17 +288,18 @@ int main(int argc, char* argv[])
     if (options.isTranslationFlag()) {
       extractFile.Close();
       extractFileInv.Close();
-      
+
     }
-    if (options.isOrientationFlag()){ 
-	extractFileOrientation.Close();
-	}
+    if (options.isOrientationFlag()) {
+      extractFileOrientation.Close();
+    }
   }
 }
 
 namespace MosesTraining
 {
-void ExtractTask::Run() {
+void ExtractTask::Run()
+{
   extract(m_sentence);
   writePhrasesToFile();
   m_extractedPhrases.clear();
@@ -648,16 +668,16 @@ void ExtractTask::addPhrase( SentenceAlignment &sentence, int startE, int endE, 
 {
   // source
   //   // cout << "adding ( " << startF << "-" << endF << ", " << startE << "-" << endE << ")\n";
-  	ostringstream outextractstr;
-  	ostringstream outextractstrInv;
-  	ostringstream outextractstrOrientation;
+  ostringstream outextractstr;
+  ostringstream outextractstrInv;
+  ostringstream outextractstrOrientation;
 
   if (m_options.isOnlyOutputSpanInfo()) {
     cout << startF << " " << endF << " " << startE << " " << endE << endl;
     return;
   }
 
-for(int fi=startF; fi<=endF; fi++) {
+  for(int fi=startF; fi<=endF; fi++) {
     if (m_options.isTranslationFlag()) outextractstr << sentence.source[fi] << " ";
     if (m_options.isOrientationFlag()) outextractstrOrientation << sentence.source[fi] << " ";
   }
@@ -676,13 +696,13 @@ for(int fi=startF; fi<=endF; fi++) {
 
   // source (for inverse)
 
- if (m_options.isTranslationFlag()) {
+  if (m_options.isTranslationFlag()) {
     for(int fi=startF; fi<=endF; fi++)
       outextractstrInv << sentence.source[fi] << " ";
     outextractstrInv << "|||";
   }
   // alignment
- if (m_options.isTranslationFlag()) {
+  if (m_options.isTranslationFlag()) {
     for(int ei=startE; ei<=endE; ei++) {
       for(unsigned int i=0; i<sentence.alignedToT[ei].size(); i++) {
         int fi = sentence.alignedToT[ei][i];
@@ -699,44 +719,56 @@ for(int fi=startF; fi<=endF; fi++) {
     outextractstr << " ||| " << sentence.sentenceID;
   }
 
+  if (m_options.getInstanceWeightsFile().length()) {
+    if (m_options.isTranslationFlag()) {
+      outextractstr << " ||| " << sentence.weightString;
+      outextractstrInv << " ||| " << sentence.weightString;
+    }
+    if (m_options.isOrientationFlag()) {
+      outextractstrOrientation << " ||| " << sentence.weightString;
+    }
+  }
+
+
   if (m_options.isTranslationFlag()) outextractstr << "\n";
   if (m_options.isTranslationFlag()) outextractstrInv << "\n";
   if (m_options.isOrientationFlag()) outextractstrOrientation << "\n";
 
 
-    m_extractedPhrases.push_back(outextractstr.str());
-    m_extractedPhrasesInv.push_back(outextractstrInv.str());
-    m_extractedPhrasesOri.push_back(outextractstrOrientation.str());
+  m_extractedPhrases.push_back(outextractstr.str());
+  m_extractedPhrasesInv.push_back(outextractstrInv.str());
+  m_extractedPhrasesOri.push_back(outextractstrOrientation.str());
 }
 
 
-void ExtractTask::writePhrasesToFile(){
+void ExtractTask::writePhrasesToFile()
+{
 
-    ostringstream outextractFile;
-    ostringstream outextractFileInv;
-    ostringstream outextractFileOrientation;
+  ostringstream outextractFile;
+  ostringstream outextractFileInv;
+  ostringstream outextractFileOrientation;
 
-    for(vector<string>::const_iterator phrase=m_extractedPhrases.begin();phrase!=m_extractedPhrases.end();phrase++){
-        outextractFile<<phrase->data();
-    }
-    for(vector<string>::const_iterator phrase=m_extractedPhrasesInv.begin();phrase!=m_extractedPhrasesInv.end();phrase++){
-        outextractFileInv<<phrase->data();
-    }
-    for(vector<string>::const_iterator phrase=m_extractedPhrasesOri.begin();phrase!=m_extractedPhrasesOri.end();phrase++){
-        outextractFileOrientation<<phrase->data();
-    }
+  for(vector<string>::const_iterator phrase=m_extractedPhrases.begin(); phrase!=m_extractedPhrases.end(); phrase++) {
+    outextractFile<<phrase->data();
+  }
+  for(vector<string>::const_iterator phrase=m_extractedPhrasesInv.begin(); phrase!=m_extractedPhrasesInv.end(); phrase++) {
+    outextractFileInv<<phrase->data();
+  }
+  for(vector<string>::const_iterator phrase=m_extractedPhrasesOri.begin(); phrase!=m_extractedPhrasesOri.end(); phrase++) {
+    outextractFileOrientation<<phrase->data();
+  }
 
-      m_extractFile << outextractFile.str();
-      m_extractFileInv  << outextractFileInv.str();
-      m_extractFileOrientation << outextractFileOrientation.str();
+  m_extractFile << outextractFile.str();
+  m_extractFileInv  << outextractFileInv.str();
+  m_extractFileOrientation << outextractFileOrientation.str();
 }
 
 // if proper conditioning, we need the number of times a source phrase occured
 
 void ExtractTask::extractBase( SentenceAlignment &sentence )
 {
-    ostringstream outextractFile;
-    ostringstream outextractFileInv;
+  ostringstream outextractFile;
+  ostringstream outextractFileInv;
 
   int countF = sentence.source.size();
   for(int startF=0; startF<countF; startF++) {
@@ -744,8 +776,8 @@ void ExtractTask::extractBase( SentenceAlignment &sentence )
         (endF<countF && endF<startF+m_options.maxPhraseLength);
         endF++) {
       for(int fi=startF; fi<=endF; fi++) {
-         outextractFile << sentence.source[fi] << " ";
-	}
+        outextractFile << sentence.source[fi] << " ";
+      }
       outextractFile << "|||" << endl;
     }
   }
@@ -761,8 +793,8 @@ void ExtractTask::extractBase( SentenceAlignment &sentence )
       outextractFileInv << "|||" << endl;
     }
   }
-    m_extractFile << outextractFile.str();
-    m_extractFileInv << outextractFileInv.str();
+  m_extractFile << outextractFile.str();
+  m_extractFileInv << outextractFileInv.str();
 
 }
 

@@ -31,7 +31,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "WordsBitmap.h"
 #include "Sentence.h"
 #include "Phrase.h"
-#include "PhraseDictionaryMemory.h"
 #include "GenerationDictionary.h"
 #include "ScoreComponentCollection.h"
 #include "InputType.h"
@@ -46,6 +45,8 @@ class TranslationOption;
 class WordsRange;
 class Hypothesis;
 class FFState;
+class StatelessFeatureFunction;
+class StatefulFeatureFunction;
 class Manager;
 class LexicalReordering;
 
@@ -79,8 +80,7 @@ protected:
   bool							m_wordDeleted;
   float							m_totalScore;  /*! score so far */
   float							m_futureScore; /*! estimated future cost to translate rest of sentence */
-  mutable std::auto_ptr<ScoreComponentCollection> m_scoreBreakdown; /*! detailed score break-down by components (for instance language model, word penalty, etc) */
-  ScoreComponentCollection m_currScoreBreakdown; /*! scores for this hypothesis */
+  ScoreComponentCollection m_scoreBreakdown; /*! scores for this hypothesis */
   std::vector<const FFState*> m_ffStates;
   const Hypothesis 	*m_winningHypo;
   ArcList 					*m_arcList; /*! all arcs that end at the same trellis point as this hypothesis */
@@ -124,7 +124,6 @@ public:
     return m_targetPhrase;
   }
 
-// void PrintLMScores(const LMList &lmListInitial, const LMList	&lmListEnd) const;
 
   /** return input positions covered by the translation option (phrasal translation) used to create this hypothesis */
   inline const WordsRange &GetCurrSourceWordsRange() const {
@@ -144,12 +143,7 @@ public:
     return m_currTargetWordsRange.GetNumWordsCovered();
   }
 
-  void ResetScore();
-
-  void CalcScore(const SquareMatrix &futureScore);
-
-  float CalcExpectedScore( const SquareMatrix &futureScore );
-  void CalcRemainingScore();
+  void Evaluate(const SquareMatrix &futureScore);
 
   int GetId()const {
     return m_id;
@@ -206,11 +200,12 @@ public:
 
   int RecombineCompare(const Hypothesis &compare) const;
 
+  void GetOutputPhrase(Phrase &out) const;
+
   void ToStream(std::ostream& out) const {
-    if (m_prevHypo != NULL) {
-      m_prevHypo->ToStream(out);
-    }
-    out << (Phrase) GetCurrTargetPhrase();
+    Phrase ret;
+    GetOutputPhrase(ret);
+    out << ret;
   }
 
   void ToStringStream(std::stringstream& out) const {
@@ -243,13 +238,7 @@ public:
     return m_arcList;
   }
   const ScoreComponentCollection& GetScoreBreakdown() const {
-    if (!m_scoreBreakdown.get()) {
-      m_scoreBreakdown.reset(new ScoreComponentCollection(m_currScoreBreakdown));
-      if (m_prevHypo) {
-        m_scoreBreakdown->PlusEquals(m_prevHypo->GetScoreBreakdown());
-      }
-    }
-    return *m_scoreBreakdown;
+    return m_scoreBreakdown;
   }
   float GetTotalScore() const {
     return m_totalScore;
@@ -265,11 +254,8 @@ public:
   }
 
   // Added by oliver.wilson@ed.ac.uk for async lm stuff.
-  void IncorporateTransOptScores();
-  void EvaluateWith(StatefulFeatureFunction* sfff, int state_idx);
-  void EvaluateWith(const StatelessFeatureFunction* slff);
-  void CalculateFutureScore(const SquareMatrix& futureScore);
-  void CalculateFinalScore();
+  void EvaluateWith(const StatefulFeatureFunction &sfff, int state_idx);
+  void EvaluateWith(const StatelessFeatureFunction &slff);
 
   //! target span that trans opt would populate if applied to this hypo. Used for alignment check
   size_t GetNextStartPos(const TranslationOption &transOpt) const;

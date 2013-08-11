@@ -35,23 +35,19 @@ class ScoreComponentCollection;
 class DecodeStepGeneration : public DecodeStep
 {
 public:
-  DecodeStepGeneration(const GenerationDictionary* dict, const DecodeStep* prev);
+  DecodeStepGeneration(const GenerationDictionary* dict,
+                       const DecodeStep* prev,
+                       const std::vector<FeatureFunction*> &features);
 
 
-  virtual void Process(const TranslationSystem* system
-                       , const TranslationOption &inputPartialTranslOpt
+  virtual void Process(const TranslationOption &inputPartialTranslOpt
                        , const DecodeStep &decodeStep
                        , PartialTranslOptColl &outputPartialTranslOptColl
                        , TranslationOptionCollection *toc
-                       , bool adhereTableLimit) const;
+                       , bool adhereTableLimit
+                       , const Phrase &src) const;
 
 private:
-  /*! create new TranslationOption from merging oldTO with mergePhrase
-  	This function runs IsCompatible() to ensure the two can be merged
-  */
-  TranslationOption *MergeGeneration(const TranslationOption& oldTO, Phrase &mergePhrase
-                                     , const ScoreComponentCollection& generationScore) const;
-
 };
 
 
