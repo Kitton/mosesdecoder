@@ -168,6 +168,17 @@ void BleuScorer::prepareStats(size_t sid, const string& text, ScoreStats& entry)
   entry.set(stats);
 }
 
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <fstream>
+#include <iostream>
+#include "FileStream.h"
+
+
 statscore_t BleuScorer::calculateScore(const vector<int>& comps) const
 {
   CHECK(comps.size() == kBleuNgramOrder * 2 + 1);
