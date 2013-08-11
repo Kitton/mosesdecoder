@@ -28,16 +28,14 @@ public:
   /** The sentence level scores have already been calculated, just need to average them
       and include the differences. Allows scores which are floats. **/
   virtual void score(const candidates_t& candidates, const diffs_t& diffs,
-                     statscores_t& scores);
-
-  // calculate the actual score *
-  virtual statscore_t calculateScore(const std::vector<statscore_t>& totals) const {
-    return 0;
-  }
+                     statscores_t& scores) const;
 
 protected:
   // Set up regularisation parameters.
   void Init();
+
+  // calculate the actual score *
+  virtual statscore_t calculateScore(const std::vector<int>& totals) const = 0;
 
   //regularisation
   ScorerRegularisationStrategy m_regularisationStrategy;

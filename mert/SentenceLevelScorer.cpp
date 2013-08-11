@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <boost/spirit/home/support/detail/lexer/runtime_error.hpp>
+#include <fstream>
 
 using namespace std;
 
@@ -62,7 +63,7 @@ void SentenceLevelScorer::Init() {
 }
 
 void  SentenceLevelScorer::score(const candidates_t& candidates, const diffs_t& diffs,
-                                 statscores_t& scores)
+                                 statscores_t& scores) const
 {
   //cout << "*******SentenceLevelScorer::score" << endl;
   if (!m_score_data) {
@@ -76,7 +77,7 @@ void  SentenceLevelScorer::score(const candidates_t& candidates, const diffs_t& 
     throw runtime_error("No candidates supplied");
   }
   const int numCounts = m_score_data->get(0,candidates[0]).size();
-  vector<float> totals(numCounts);
+  vector<int> totals(numCounts);
   for (size_t i = 0; i < candidates.size(); ++i) {
     //cout << " i " << i << " candi " << candidates[i] ;
     ScoreStats stats = m_score_data->get(i,candidates[i]);
