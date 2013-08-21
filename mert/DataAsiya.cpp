@@ -19,11 +19,6 @@ using namespace std;
 
 namespace MosesTuning
 {
-  
-
-DataAsiya::DataAsiya()
-    : Data() {}
-
 DataAsiya::DataAsiya(Scorer* scorer, const string &sparseweightsfile)
     : Data(scorer, sparseweightsfile)
 {

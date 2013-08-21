@@ -27,7 +27,6 @@ class DataAsiya : public Data
 {
 public:
   explicit DataAsiya(Scorer* scorer, const std::string& sparseweightsfile="");
-  explicit DataAsiya();
   ~DataAsiya();
   
   void loadNBest(const std::string &file);
