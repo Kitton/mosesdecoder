@@ -73,7 +73,7 @@ void DataAsiya::loadNBest(const string &file)
     if (!existsFeatureNames()) {
       InitFeatureMap(feature_str);
     }
-    AddFeatures(feature_str, sentence_index);
+    AddFeatures(feature_str, atoi(sentence_index.c_str()));
   }
 
   a_scorer->doScoring();
@@ -85,7 +85,7 @@ void DataAsiya::loadNBest(const string &file)
       {
           stringstream ss;
           ss << i;
-          m_score_data->add(allScoreStats[i][j], ss.str());
+          m_score_data->add(allScoreStats[i][j], atoi(ss.str().c_str()));
 //          TRACE_ERR("allScoreStats[" << i << "].size() " << allScoreStats[i].size() << " " << allScoreStats[i][j] << endl);
       }
 
