@@ -24,8 +24,8 @@ namespace MosesTuning
 DataAsiya::DataAsiya()
     : Data() {}
 
-DataAsiya::DataAsiya(Scorer* scorer)
-    : Data(scorer)
+DataAsiya::DataAsiya(Scorer* scorer, const string &sparseweightsfile)
+    : Data(scorer, sparseweightsfile)
 {
   TRACE_ERR("DataAsiya::m_score_type " << m_score_type << endl);
   TRACE_ERR("DataAsiya::Scorer type from Scorer: " << m_scorer->getName() << endl);

@@ -26,7 +26,7 @@ class Scorer;
 class DataAsiya : public Data
 {
 public:
-  explicit DataAsiya(Scorer* scorer);
+  explicit DataAsiya(Scorer* scorer, const std::string& sparseweightsfile="");
   explicit DataAsiya();
   ~DataAsiya();
   
