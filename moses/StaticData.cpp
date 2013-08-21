@@ -79,14 +79,6 @@ StaticData::~StaticData()
 {
   RemoveAllInColl(m_decodeGraphs);
 
-  typedef std::map<std::pair<std::pair<size_t, std::string>, Phrase>, std::pair<TranslationOptionList*,clock_t> > Coll;
-  Coll::iterator iter;
-  for (iter = m_transOptCache.begin(); iter != m_transOptCache.end(); ++iter) {
-    std::pair<TranslationOptionList*,clock_t> &valuePair =iter->second;
-    TranslationOptionList *transOptList = valuePair.first;
-    delete transOptList;
-  }
-
   /*
   const std::vector<FeatureFunction*> &producers = FeatureFunction::GetFeatureFunctions();
   for(size_t i=0;i<producers.size();++i) {
@@ -277,15 +269,6 @@ bool StaticData::LoadData(Parameter *parameter)
   // print all factors of output translations
   SetBooleanParameter( &m_reportAllFactorsNBest, "report-all-factors-in-n-best", false );
 
-  // caching of translation options
-  if (m_inputType == SentenceInput) {
-    SetBooleanParameter( &m_useTransOptCache, "use-persistent-cache", true );
-    m_transOptCacheMaxSize = (m_parameter->GetParam("persistent-cache-size").size() > 0)
-                             ? Scan<size_t>(m_parameter->GetParam("persistent-cache-size")[0]) : DEFAULT_MAX_TRANS_OPT_CACHE_SIZE;
-  } else {
-    m_useTransOptCache = false;
-  }
-
   //input factors
   const vector<string> &inputFactorVector = m_parameter->GetParam("input-factors");
   for(size_t i=0; i<inputFactorVector.size(); i++) {
@@ -381,6 +364,7 @@ bool StaticData::LoadData(Parameter *parameter)
 
   // unknown word processing
   SetBooleanParameter( &m_dropUnknown, "drop-unknown", false );
+  SetBooleanParameter( &m_markUnknown, "mark-unknown", false );
 
   SetBooleanParameter( &m_lmEnableOOVFeature, "lmodel-oov-feature", false);
 
@@ -504,10 +488,11 @@ bool StaticData::LoadData(Parameter *parameter)
   if (m_parameter->GetParam("xml-input").size() == 0) m_xmlInputType = XmlPassThrough;
   else if (m_parameter->GetParam("xml-input")[0]=="exclusive") m_xmlInputType = XmlExclusive;
   else if (m_parameter->GetParam("xml-input")[0]=="inclusive") m_xmlInputType = XmlInclusive;
+  else if (m_parameter->GetParam("xml-input")[0]=="constraint") m_xmlInputType = XmlConstraint;
   else if (m_parameter->GetParam("xml-input")[0]=="ignore") m_xmlInputType = XmlIgnore;
   else if (m_parameter->GetParam("xml-input")[0]=="pass-through") m_xmlInputType = XmlPassThrough;
   else {
-    UserMessage::Add("invalid xml-input value, must be pass-through, exclusive, inclusive, or ignore");
+    UserMessage::Add("invalid xml-input value, must be pass-through, exclusive, inclusive, constraint, or ignore");
     return false;
   }
 
@@ -524,9 +509,13 @@ bool StaticData::LoadData(Parameter *parameter)
   }
 
   if (m_parameter->GetParam("placeholder-factor").size() > 0) {
-    m_placeHolderFactor = Scan<FactorType>(m_parameter->GetParam("placeholder-factor")[0]);
+    CHECK(m_parameter->GetParam("placeholder-factor").size() == 2);
+    m_placeHolderFactor = std::pair<FactorType, FactorType>(
+                            Scan<FactorType>(m_parameter->GetParam("placeholder-factor")[0]),
+                            Scan<FactorType>(m_parameter->GetParam("placeholder-factor")[1])
+                          );
   } else {
-    m_placeHolderFactor = NOT_FOUND;
+    m_placeHolderFactor = std::pair<FactorType, FactorType>(NOT_FOUND, NOT_FOUND);
   }
 
 
@@ -770,72 +759,6 @@ bool StaticData::LoadDecodeGraphs()
   }
 
   return true;
-}
-
-const TranslationOptionList* StaticData::FindTransOptListInCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase) const
-{
-  std::pair<size_t, std::string> cacheKey(decodeGraph.GetPosition(), m_currentWeightSetting);
-  std::pair<std::pair<size_t, std::string>, Phrase> key(cacheKey, sourcePhrase);
-#ifdef WITH_THREADS
-  boost::mutex::scoped_lock lock(m_transOptCacheMutex);
-#endif
-  std::map<std::pair<std::pair<size_t, std::string>, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iter
-  = m_transOptCache.find(key);
-  if (iter == m_transOptCache.end())
-    return NULL;
-  iter->second.second = clock(); // update last used time
-  return iter->second.first;
-}
-
-void StaticData::ReduceTransOptCache() const
-{
-  if (m_transOptCache.size() <= m_transOptCacheMaxSize) return; // not full
-  clock_t t = clock();
-
-  // find cutoff for last used time
-  priority_queue< clock_t > lastUsedTimes;
-
-  std::map<std::pair<std::pair<size_t, std::string>, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iter;
-  iter = m_transOptCache.begin();
-  while( iter != m_transOptCache.end() ) {
-    lastUsedTimes.push( iter->second.second );
-    iter++;
-  }
-  for( size_t i=0; i < lastUsedTimes.size()-m_transOptCacheMaxSize/2; i++ )
-    lastUsedTimes.pop();
-  clock_t cutoffLastUsedTime = lastUsedTimes.top();
-
-  // remove all old entries
-  iter = m_transOptCache.begin();
-  while( iter != m_transOptCache.end() ) {
-    if (iter->second.second < cutoffLastUsedTime) {
-      std::map<std::pair<std::pair<size_t, std::string>, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iterRemove = iter++;
-      delete iterRemove->second.first;
-      m_transOptCache.erase(iterRemove);
-    } else iter++;
-  }
-  VERBOSE(2,"Reduced persistent translation option cache in " << ((clock()-t)/(float)CLOCKS_PER_SEC) << " seconds." << std::endl);
-}
-
-void StaticData::AddTransOptListToCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase, const TranslationOptionList &transOptList) const
-{
-  if (m_transOptCacheMaxSize == 0) return;
-  std::pair<size_t, std::string> cacheKey(decodeGraph.GetPosition(), m_currentWeightSetting);
-  std::pair<std::pair<size_t, std::string>, Phrase> key(cacheKey, sourcePhrase);
-  TranslationOptionList* storedTransOptList = new TranslationOptionList(transOptList);
-#ifdef WITH_THREADS
-  boost::mutex::scoped_lock lock(m_transOptCacheMutex);
-#endif
-  m_transOptCache[key] = make_pair( storedTransOptList, clock() );
-  ReduceTransOptCache();
-}
-void StaticData::ClearTransOptionCache() const
-{
-  map<std::pair<std::pair<size_t, std::string>, Phrase>, std::pair< TranslationOptionList*, clock_t > >::iterator iterCache;
-  for (iterCache = m_transOptCache.begin() ; iterCache != m_transOptCache.end() ; ++iterCache) {
-    TranslationOptionList *transOptList = iterCache->second.first;
-    delete transOptList;
-  }
 }
 
 void StaticData::ReLoadParameter()

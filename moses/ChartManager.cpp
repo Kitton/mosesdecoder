@@ -50,7 +50,7 @@ ChartManager::ChartManager(InputType const& source)
   ,m_start(clock())
   ,m_hypothesisId(0)
   ,m_parser(source, m_hypoStackColl)
-  ,m_translationOptionList(StaticData::Instance().GetRuleLimit())
+  ,m_translationOptionList(StaticData::Instance().GetRuleLimit(), source)
 {
 }
 
@@ -136,13 +136,15 @@ void ChartManager::AddXmlChartOptions()
       i != xmlChartOptionsList.end(); ++i) {
     ChartTranslationOptions* opt = *i;
 
-    TargetPhrase &targetPhrase = *opt->GetTargetPhraseCollection().GetCollection()[0];
-    targetPhrase.GetScoreBreakdown().Assign(staticData.GetWordPenaltyProducer(), -1);
-
+    const TargetPhrase &targetPhrase = opt->GetTargetPhrases()[0]->GetPhrase();
     const WordsRange &range = opt->GetSourceWordsRange();
+
     RuleCubeItem* item = new RuleCubeItem( *opt, m_hypoStackColl );
     ChartHypothesis* hypo = new ChartHypothesis(*opt, *item, *this);
     hypo->Evaluate();
+
+    const Word &targetLHS = hypo->GetTargetLHS();
+
     ChartCell &cell = m_hypoStackColl.Get(range);
     cell.AddHypothesis(hypo);
   }
@@ -339,6 +341,5 @@ void ChartManager::CreateDeviantPaths(
     CreateDeviantPaths(basePath, child, queue);
   }
 }
-
 
 } // namespace Moses

@@ -128,7 +128,7 @@ void PhraseDictionaryMultiModel::CollectSufficientStatistics(const Phrase& src, 
       }
 
       for (iterTargetPhrase = ret_raw->begin(); iterTargetPhrase != iterLast;  ++iterTargetPhrase) {
-        TargetPhrase * targetPhrase = *iterTargetPhrase;
+        const TargetPhrase * targetPhrase = *iterTargetPhrase;
         std::vector<float> raw_scores = targetPhrase->GetScoreBreakdown().GetScoresForProducer(&pd);
 
         std::string targetString = targetPhrase->GetStringRep(m_output);
@@ -259,7 +259,7 @@ std::vector<float> PhraseDictionaryMultiModel::normalizeWeights(std::vector<floa
 }
 
 
-ChartRuleLookupManager *PhraseDictionaryMultiModel::CreateRuleLookupManager(const InputType&, const ChartCellCollectionBase&)
+ChartRuleLookupManager *PhraseDictionaryMultiModel::CreateRuleLookupManager(const ChartParser &, const ChartCellCollectionBase&)
 {
   UTIL_THROW(util::Exception, "Phrase table used in chart decoder");
 }

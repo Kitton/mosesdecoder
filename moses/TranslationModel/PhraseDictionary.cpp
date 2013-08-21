@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "moses/InputType.h"
 #include "moses/TranslationOption.h"
 #include "moses/UserMessage.h"
+#include "moses/InputPath.h"
+#include "util/exception.hh"
 
 using namespace std;
 
@@ -33,20 +35,65 @@ namespace Moses
 PhraseDictionary::PhraseDictionary(const std::string &description, const std::string &line)
   :DecodeFeature(description, line)
   ,m_tableLimit(20) // default
+  ,m_maxCacheSize(DEFAULT_MAX_TRANS_OPT_CACHE_SIZE)
 {
 }
 
-
-const TargetPhraseCollection *PhraseDictionary::
-GetTargetPhraseCollection(InputType const& src,WordsRange const& range) const
+const TargetPhraseCollection *PhraseDictionary::GetTargetPhraseCollection(const Phrase& src) const
 {
-  Phrase phrase = src.GetSubString(range);
-  return GetTargetPhraseCollection(phrase);
+  const TargetPhraseCollection *ret;
+  if (m_maxCacheSize) {
+    CacheColl &cache = GetCache();
+
+    size_t hash = hash_value(src);
+
+    std::map<size_t, std::pair<const TargetPhraseCollection*, clock_t> >::iterator iter;
+
+    iter = cache.find(hash);
+
+    if (iter == cache.end()) {
+      // not in cache, need to look up from phrase table
+      ret = GetTargetPhraseCollectionNonCache(src);
+      if (ret) {
+        ret = new TargetPhraseCollection(*ret);
+      }
+
+      std::pair<const TargetPhraseCollection*, clock_t> value(ret, clock());
+      cache[hash] = value;
+    } else {
+      // in cache. just use it
+    	std::pair<const TargetPhraseCollection*, clock_t> &value = iter->second;
+    	value.second = clock();
+
+    	ret = value.first;
+    }
+  } else {
+	// don't use cache. look up from phrase table
+    ret = GetTargetPhraseCollectionNonCache(src);
+  }
+
+  return ret;
+}
+
+const TargetPhraseCollection *PhraseDictionary::GetTargetPhraseCollectionNonCache(const Phrase& src) const
+{
+  UTIL_THROW(util::Exception, "Legacy method not implemented");
+}
+
+
+const TargetPhraseCollectionWithSourcePhrase* PhraseDictionary::
+GetTargetPhraseCollectionLegacy(InputType const& src,WordsRange const& range) const
+{
+  UTIL_THROW(util::Exception, "Legacy method not implemented");
+  //Phrase phrase = src.GetSubString(range);
+  //return GetTargetPhraseCollection(phrase);
 }
 
 void PhraseDictionary::SetParameter(const std::string& key, const std::string& value)
 {
-  if (key == "path") {
+  if (key == "cache-size") {
+	  m_maxCacheSize = Scan<size_t>(value);
+  } else if (key == "path") {
     m_filePath = value;
   } else if (key == "table-limit") {
     m_tableLimit = Scan<size_t>(value);
@@ -67,5 +114,59 @@ void PhraseDictionary::SetFeaturesToApply()
   }
 }
 
+void PhraseDictionary::GetTargetPhraseCollectionBatch(const InputPathList &phraseDictionaryQueue) const
+{
+  InputPathList::const_iterator iter;
+  for (iter = phraseDictionaryQueue.begin(); iter != phraseDictionaryQueue.end(); ++iter) {
+    InputPath &node = **iter;
+
+    const Phrase &phrase = node.GetPhrase();
+    const TargetPhraseCollection *targetPhrases = this->GetTargetPhraseCollection(phrase);
+    node.SetTargetPhrases(*this, targetPhrases, NULL);
+  }
 }
+
+void PhraseDictionary::ReduceCache() const
+{
+	CacheColl &cache = GetCache();
+  if (cache.size() <= m_maxCacheSize) return; // not full
+
+  // find cutoff for last used time
+  priority_queue< clock_t > lastUsedTimes;
+  std::map<size_t, std::pair<const TargetPhraseCollection*,clock_t> >::iterator iter;
+  iter = cache.begin();
+  while( iter != cache.end() ) {
+    lastUsedTimes.push( iter->second.second );
+    iter++;
+  }
+  for( size_t i=0; i < lastUsedTimes.size()-m_maxCacheSize/2; i++ )
+    lastUsedTimes.pop();
+  clock_t cutoffLastUsedTime = lastUsedTimes.top();
+  clock_t t = clock();
+
+  // remove all old entries
+  iter = cache.begin();
+  while( iter != cache.end() ) {
+    if (iter->second.second < cutoffLastUsedTime) {
+      std::map<size_t, std::pair<const TargetPhraseCollection*,clock_t> >::iterator iterRemove = iter++;
+      delete iterRemove->second.first;
+      cache.erase(iterRemove);
+    } else iter++;
+  }
+  VERBOSE(2,"Reduced persistent translation option cache in " << ((clock()-t)/(float)CLOCKS_PER_SEC) << " seconds." << std::endl);
+}
+
+PhraseDictionary::CacheColl &PhraseDictionary::GetCache() const
+{
+  CacheColl *cache;
+  cache = m_cache.get();
+  if (cache == NULL) {
+	  cache = new CacheColl;
+	  m_cache.reset(cache);
+  }
+  CHECK(cache);
+  return *cache;
+}
+
+} // namespace
 

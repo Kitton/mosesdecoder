@@ -36,8 +36,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 namespace Moses
 {
-
 class FeatureFunction;
+class InputPath;
 
 /** represents an entry on the target side of a phrase table (scores, translation, alignment)
  */
@@ -48,8 +48,6 @@ protected:
   float m_fullScore, m_futureScore;
   ScoreComponentCollection m_scoreBreakdown;
 
-  // in case of confusion net, ptr to source phrase
-  Phrase m_sourcePhrase;
   const AlignmentInfo* m_alignTerm, *m_alignNonTerm;
   const Word *m_lhsTarget;
 
@@ -60,16 +58,20 @@ public:
   explicit TargetPhrase(const Phrase &targetPhrase);
   ~TargetPhrase();
 
-  void Evaluate(const Phrase &source);
+  // 1st evaluate method. Called during loading of phrase table.
   void Evaluate(const Phrase &source, const std::vector<FeatureFunction*> &ffs);
 
-  void Evaluate(const InputType &input);
+  // as above, but used only for OOV processing. Doesn't have a phrase table connect with it
+  // so doesn't have a list of ffs
+  void Evaluate(const Phrase &source);
+
+  // 'inputPath' is guaranteed to be the raw substring from the input. No factors were added or taken away
+  void Evaluate(const InputType &input, const InputPath &inputPath);
 
   void SetSparseScore(const FeatureFunction* translationScoreProducer, const StringPiece &sparseString);
 
   // used to set translation or gen score
   void SetXMLScore(float score);
-  void SetInputScore(const Scores &scoreVector);
 
 #ifdef HAVE_PROTOBUF
   void WriteToRulePB(hgmert::Rule* pb) const;
@@ -90,14 +92,6 @@ public:
   }
   inline ScoreComponentCollection &GetScoreBreakdown() {
     return m_scoreBreakdown;
-  }
-
-  //TODO: Probably shouldn't copy this, but otherwise ownership is unclear
-  void SetSourcePhrase(const Phrase&  p) {
-    m_sourcePhrase=p;
-  }
-  const Phrase& GetSourcePhrase() const {
-    return m_sourcePhrase;
   }
 
   void SetTargetLHS(const Word *lhs) {
@@ -139,7 +133,6 @@ struct TargetPhraseHasher {
   inline size_t operator()(const TargetPhrase& targetPhrase) const {
     size_t seed = 0;
     boost::hash_combine(seed, targetPhrase);
-    boost::hash_combine(seed, targetPhrase.GetSourcePhrase());
     boost::hash_combine(seed, targetPhrase.GetAlignTerm());
     boost::hash_combine(seed, targetPhrase.GetAlignNonTerm());
 
@@ -150,7 +143,6 @@ struct TargetPhraseHasher {
 struct TargetPhraseComparator {
   inline bool operator()(const TargetPhrase& lhs, const TargetPhrase& rhs) const {
     return lhs.Compare(rhs) == 0 &&
-           lhs.GetSourcePhrase().Compare(rhs.GetSourcePhrase()) == 0 &&
            lhs.GetAlignTerm() == rhs.GetAlignTerm() &&
            lhs.GetAlignNonTerm() == rhs.GetAlignNonTerm();
   }
